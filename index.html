@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unfolding Mysteries</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body ondragstart="return false;" onselectstart="return false;" style="user-select: none;">
+    <!-- Initial Overlay to Ask for Full Screen -->
+    <div id="fs-screen">
+        <button id="fs-btn">Start Experience (Requires Full Screen)</button>
+    </div>
+
+    <!-- Headphones message -->
+    <div id="headphones-msg" class="hidden">
+        <svg viewBox="0 0 24 24" width="80" height="80">
+            <path d="M12 3c-4.97 0-9 4.03-9 9v7c0 1.1.9 2 2 2h4v-8H5v-1c0-3.87 3.13-7 7-7s7 3.13 7 7v1h-4v8h4c1.1 0 2-.9 2-2v-7c0-4.97-4.03-9-9-9z"/>
+        </svg>
+        <p>RECOMMENDED : WEAR YOUR HEADPHONES</p>
+    </div>
+
+    <!-- Main Game Container -->
+    <div id="game-container" class="hidden">
+        <!-- Background Image -->
+        <div id="bg-img"></div>
+        
+        <!-- Content -->
+        <div id="content">
+            <!-- Title Wrapper -->
+            <div id="title-wrapper" class="hidden">
+                <h1 id="title">
+                    <div class="line-container">
+                        <span id="title-unfolding" class="title-line"></span>
+                    </div>
+                    <div class="line-container">
+                        <span id="title-mysteries" class="title-line no-cursor"></span>
+                    </div>
+                </h1>
+                <div id="divider-container" class="hidden">
+                    <div class="divider-line"></div>
+                    <div class="divider-ornament">
+                        <svg viewBox="0 0 100 50" width="80" height="40">
+                            <path d="M50 5 Q60 25 80 25 Q60 25 50 45 Q40 25 20 25 Q40 25 50 5 Z" fill="#e3bc5c" />
+                            <path d="M50 15 Q55 25 65 25 Q55 25 50 35 Q45 25 35 25 Q45 25 50 15 Z" fill="#ffebd6" />
+                        </svg>
+                    </div>
+                    <div class="divider-line"></div>
+                </div>
+            </div>
+            
+            <!-- Menu Buttons -->
+            <div id="menu-buttons" class="hidden">
+                <div class="btn-wrapper" id="new-game-wrapper">
+                    <div class="btn-crest">
+                        <div class="crest-glow"></div>
+                        <svg viewBox="0 0 100 60" width="80" height="48">
+                            <path d="M50 10 C30 10 20 50 20 50 L80 50 C80 50 70 10 50 10 Z" fill="none" stroke="#e3bc5c" stroke-width="2"/>
+                            <circle cx="50" cy="35" r="8" fill="#fff" filter="drop-shadow(0 0 10px #ffbb00)"/>
+                            <path d="M30 40 Q50 20 70 40" fill="none" stroke="#e3bc5c" stroke-width="1.5"/>
+                            <path d="M40 50 L40 40 M60 50 L60 40" stroke="#e3bc5c" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <button class="menu-btn" id="new-game-btn">
+                        <span class="btn-text">NEW GAME</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                </div>
+
+                <div class="btn-wrapper" id="settings-wrapper">
+                    <button class="menu-btn" id="settings-btn">
+                        <span class="btn-text">SETTINGS</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Difficulty Selection Overlay -->
+        <div id="difficulty-overlay" class="hidden">
+            <h2 class="difficulty-title">SELECT DIFFICULTY</h2>
+            <div class="difficulty-buttons">
+                <button class="diff-btn">EASY</button>
+                <button class="diff-btn">MEDIUM</button>
+                <button class="diff-btn">HARD</button>
+            </div>
+            <button class="back-btn" id="diff-back-btn">BACK</button>
+        </div>
+
+        <!-- Settings Overlay -->
+        <div id="settings-overlay" class="hidden">
+            <h2 class="settings-title">SETTINGS</h2>
+            
+            <div class="settings-content">
+                <div class="setting-group">
+                    <label>MASTER VOLUME</label>
+                    <div class="volume-control">
+                        <input type="range" min="0" max="100" value="100" class="styled-slider" id="master-vol">
+                        <button class="mute-btn" id="mute-master">MUTE</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <label>AUDIO VOLUME</label>
+                    <div class="volume-control">
+                        <input type="range" min="0" max="100" value="100" class="styled-slider" id="audio-vol">
+                        <button class="mute-btn" id="mute-audio">MUTE</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <label>MUSIC VOLUME</label>
+                    <div class="volume-control">
+                        <input type="range" min="0" max="100" value="100" class="styled-slider" id="music-vol">
+                        <button class="mute-btn" id="mute-music">MUTE</button>
+                    </div>
+                </div>
+                
+                <div id="developer-options">
+                    <h3 class="dev-title">DEVELOPER OPTIONS</h3>
+                    <div class="setting-group">
+                        <label>GEMINI API KEY</label>
+                        <input type="password" class="styled-input" id="gemini-key" placeholder="Enter key...">
+                    </div>
+                    <div class="setting-group">
+                        <label>MURF API KEY</label>
+                        <input type="password" class="styled-input" id="murf-key" placeholder="Enter key...">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-actions">
+                <button class="back-btn" id="settings-back-btn">BACK</button>
+                <button class="back-btn hidden" id="settings-home-btn">HOME PAGE</button>
+                <button class="back-btn" id="settings-quit-btn" style="color: #ff3333; border-color: #ff3333;">QUIT GAME</button>
+            </div>
+        </div>
+
+        <!-- Black Overlay for Transitions -->
+        <div id="black-overlay"></div>
+        
+        <!-- Story Text Overlay -->
+        <div id="story-overlay" class="hidden">
+            <h1 id="story-text" class="story-line"></h1>
+        </div>
+        
+        <!-- Cutscene Layer -->
+        <div id="cutscene-layer" class="hidden">
+            <div class="cutscene-bg" id="cutscene-bg-1"></div>
+            <div class="cutscene-bg" id="cutscene-bg-2"></div>
+            <div id="subtitle-container">
+                <p id="subtitle-text"></p>
+            </div>
+        </div>
+
+        <button id="skip-prelude-btn" class="hidden">SKIP PRELUDE</button>
+
+        <!-- Rules Overlay -->
+        <div id="rules-overlay" class="hidden">
+            <h2 class="rules-title">RULES OF ENGAGEMENT</h2>
+            <div class="rules-content">
+                <p class="diff-display">DIFFICULTY: <span id="rules-diff-display">EASY</span></p>
+                <div id="rules-list"></div>
+            </div>
+            <button class="back-btn" id="accept-rules-btn">UNDERSTOOD</button>
+        </div>
+
+        <!-- Journal UI -->
+        <div id="journal-wrapper" class="hidden">
+            <div id="journal-book">
+                <div class="journal-page right-page">
+                    <h3 class="journal-title">INVESTIGATOR'S LOG</h3>
+                    <div id="journal-window">
+                        <div id="journal-input" contenteditable="true" spellcheck="false" data-placeholder="Begin typing notes..."></div>
+                    </div>
+                    <div class="journal-controls">
+                        <button id="journal-prev">&lt;</button>
+                        <span id="journal-page-num">1</span>
+                        <button id="journal-next">&gt;</button>
+                    </div>
+                </div>
+            </div>
+            <button id="close-journal-btn" class="back-btn">CLOSE JOURNAL</button>
+        </div>
+
+        <button id="open-journal-btn" class="hidden">JOURNAL</button>
+        <button id="in-game-settings-btn" class="hidden in-game-nav">
+            <svg viewBox="0 0 24 24" width="24" height="24">
+                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" fill="currentColor"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Audio Elements -->
+    <audio id="intro-music" src="assets/audios/IntroMusic.mp3" loop></audio>
+    <audio id="click-sfx" src="assets/audios/click.mp3"></audio>
+    <audio id="thunder-rain" src="assets/audios/thunderrain.mp3" loop></audio>
+
+    <script src="script.js"></script>
+</body>
+</html>
