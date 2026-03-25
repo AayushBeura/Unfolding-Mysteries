@@ -679,11 +679,21 @@ document.addEventListener('DOMContentLoaded', () => {
             openJournalBtn.classList.remove('hidden'); 
             document.getElementById('in-game-settings-btn').classList.remove('hidden');
             
-            // Show suspects screen
+            // Show suspects screen and global bottom bar
             const suspectsScreen = document.getElementById('suspects-screen');
             suspectsScreen.classList.remove('hidden');
+            const globalBottomBar = document.getElementById('global-bottom-bar');
+            globalBottomBar.classList.remove('hidden');
+            
+            // Set up total questions right before showing
+            if (selectedDifficulty === 'MEDIUM') questionsTotal = 25;
+            if (selectedDifficulty === 'HARD') questionsTotal = 20;
+            document.getElementById('questions-total').textContent = questionsTotal;
+            document.getElementById('questions-used').textContent = questionsUsed;
+
             setTimeout(() => {
                 suspectsScreen.classList.add('visible');
+                globalBottomBar.classList.add('visible');
                 startGameTimer();
             }, 50);
         }, 500);
@@ -691,11 +701,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Suspects and Interrogation System ---
     const suspectsData = [
-        { id: 'edward_hartwell', name: 'Edward Hartwell', role: 'Guest One', status: 'NOT QUESTIONED', pic: 'scared-guest.png', interrogations: 0 },
-        { id: 'thomas_blackwood', name: 'Thomas Blackwood', role: 'Guest Two', status: 'NOT QUESTIONED', pic: 'silent-guest.png', interrogations: 0 },
-        { id: 'victor_lancaster', name: 'Victor Lancaster', role: 'The Butler', status: 'NOT QUESTIONED', pic: 'butler.png', interrogations: 0 },
-        { id: 'emma_graves', name: 'Emma Graves', role: 'The Maid', status: 'NOT QUESTIONED', pic: 'young-maid.png', interrogations: 0 },
-        { id: 'lady_beatrice_vale', name: 'Lady Beatrice Vale', role: 'The Widow Wife', status: 'NOT QUESTIONED', pic: 'widow.png', interrogations: 0 }
+        { id: 'edward_hartwell', name: 'Edward Hartwell', role: 'Guest One', status: 'NOT QUESTIONED', pic: 'scared-guest.png', headshot: 'EdwardHartell-Scaredguest.png', interrogations: 0 },
+        { id: 'thomas_blackwood', name: 'Thomas Blackwood', role: 'Guest Two', status: 'NOT QUESTIONED', pic: 'silent-guest.png', headshot: 'ThomasBlackwood-SilentGuest.png', interrogations: 0 },
+        { id: 'victor_lancaster', name: 'Victor Lancaster', role: 'The Butler', status: 'NOT QUESTIONED', pic: 'butler.png', headshot: 'VictorLancaster-Butler.png', interrogations: 0 },
+        { id: 'emma_graves', name: 'Emma Graves', role: 'The Maid', status: 'NOT QUESTIONED', pic: 'young-maid.png', headshot: 'EmmaGraves-Maid.png', interrogations: 0 },
+        { id: 'lady_beatrice_vale', name: 'Lady Beatrice Vale', role: 'The Widow Wife', status: 'NOT QUESTIONED', pic: 'widow.png', headshot: 'LadyBeatriceVale-WidowWife.png', interrogations: 0 }
     ];
 
     let questionsUsed = 0;
@@ -730,7 +740,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Note: I will use the actual images we have for the portraits.
             card.innerHTML = `
-                <div class="suspect-portrait" style="background-image: url('assets/images/${s.pic}')"></div>
+                <div class="suspect-portrait" style="background-image: url('assets/headshots/${s.headshot}')"></div>
                 <div class="suspect-info">
                     <h3 class="suspect-name">${s.name}</h3>
                     <p class="suspect-role">${s.role}</p>
@@ -778,9 +788,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Need a tiny timeout to re-trigger animation
             setTimeout(() => { interBg.classList.add('interrogation-anim-zoom'); }, 50);
 
-            // Set up total questions allowed based on difficulty
-            if (selectedDifficulty === 'MEDIUM') questionsTotal = 25;
-            if (selectedDifficulty === 'HARD') questionsTotal = 20;
+            // Set up totals update (failsafe update)
             document.getElementById('questions-total').textContent = questionsTotal;
             document.getElementById('questions-used').textContent = questionsUsed;
 
@@ -791,15 +799,117 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('interrogation-screen').classList.add('visible');
                 blackOverlay.classList.remove('fade-in');
                 blackOverlay.classList.add('fade-out');
-                
-                // Track interrogation
-                suspect.interrogations++;
-                if (suspect.status === 'NOT QUESTIONED') suspect.status = 'QUESTIONED';
-                renderSuspects(); // Re-render for next time
             }, 1000);
             
         }, 1500); // Wait for black overlay to cover
     }
+
+    const errorPopupOverlay = document.getElementById('error-popup-overlay');
+    const errorPopupMsg = document.getElementById('error-popup-msg');
+    const errorPopupClose = document.getElementById('error-popup-close');
+    const giveVerdictBtn = document.getElementById('give-verdict-btn');
+
+    function showErrorPopup(msg) {
+        if (clickSfx) {
+            clickSfx.currentTime = 0;
+            clickSfx.play().catch(e => {});
+        }
+        errorPopupMsg.textContent = msg;
+        errorPopupOverlay.classList.remove('hidden');
+        setTimeout(() => {
+            errorPopupOverlay.classList.add('visible');
+        }, 50);
+    }
+
+    errorPopupClose.addEventListener('click', () => {
+        errorPopupOverlay.classList.remove('visible');
+        setTimeout(() => {
+            errorPopupOverlay.classList.add('hidden');
+        }, 400);
+    });
+
+    function checkVerdictCondition() {
+        const everyoneQuestioned = suspectsData.every(s => s.interrogations >= 1);
+        if (everyoneQuestioned) {
+            giveVerdictBtn.classList.remove('hidden');
+        } else {
+            giveVerdictBtn.classList.add('hidden');
+        }
+    }
+
+    const verdictPopupOverlay = document.getElementById('verdict-popup-overlay');
+    const verdictCloseBtn = document.getElementById('verdict-close-btn');
+    const verdictSubmitBtn = document.getElementById('verdict-submit-btn');
+    let selectedVerdictId = null;
+
+    giveVerdictBtn.addEventListener('click', () => {
+        if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
+        verdictPopupOverlay.classList.remove('hidden');
+        setTimeout(() => {
+            verdictPopupOverlay.classList.add('visible');
+        }, 50);
+    });
+
+    verdictCloseBtn.addEventListener('click', () => {
+        if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
+        verdictPopupOverlay.classList.remove('visible');
+        setTimeout(() => {
+            verdictPopupOverlay.classList.add('hidden');
+        }, 400);
+    });
+
+    document.querySelectorAll('.verdict-suspect-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(err => {}); }
+            document.querySelectorAll('.verdict-suspect-btn').forEach(b => b.classList.remove('selected'));
+            e.currentTarget.classList.add('selected');
+            selectedVerdictId = e.currentTarget.getAttribute('data-id');
+            verdictSubmitBtn.disabled = false;
+        });
+    });
+
+    verdictSubmitBtn.addEventListener('click', () => {
+        if (!selectedVerdictId) return;
+        if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
+        console.log("FINAL VERDICT SUBMITTED: ", selectedVerdictId);
+        // Can transition to ending sequence here based on selected verdict
+    });
+
+    // Mic button click inside interrogation
+    document.getElementById('mic-btn').addEventListener('click', () => {
+        if (!currentSuspectId) return;
+        
+        const suspect = suspectsData.find(s => s.id === currentSuspectId);
+        if (!suspect) return;
+
+        // Check if questions are exhausted
+        if (questionsUsed >= questionsTotal) {
+            showErrorPopup("All questions have been exhausted. You cannot interrogate any further. You must now give your final verdict.");
+            return;
+        }
+        
+        // Dynamic limit before everyone else is interrogated: 4 for HARD, else 5
+        const maxConsecutiveQuestions = (selectedDifficulty === 'HARD') ? 4 : 5;
+        if (suspect.interrogations >= maxConsecutiveQuestions) {
+            const everyoneElseQuestioned = suspectsData.filter(s => s.id !== currentSuspectId).every(s => s.interrogations >= 1);
+            if (!everyoneElseQuestioned) {
+                showErrorPopup(`You must interrogate everyone at least once before asking this suspect more than ${maxConsecutiveQuestions} questions!`);
+                return;
+            }
+        }
+
+        questionsUsed++;
+        document.getElementById('questions-used').textContent = questionsUsed;
+        
+        suspect.interrogations++;
+        if (suspect.status === 'NOT QUESTIONED') suspect.status = 'QUESTIONED';
+        renderSuspects(); // Re-render in background immediately
+        checkVerdictCondition();
+
+        if (questionsUsed >= questionsTotal) {
+            showErrorPopup("All questions have been exhausted. You cannot interrogate any further. You must now give your final verdict.");
+        }
+    });
 
     document.getElementById('exit-interrogation-btn').addEventListener('click', () => {
         // Transition back

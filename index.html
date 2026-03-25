@@ -190,23 +190,85 @@
                     <div class="interrogation-case">CASE:<br>THE MURDER AT BLACKTHORN MANOR</div>
                 </div>
             </div>
-
-            <!-- Interrogation bottom bar -->
-            <div id="interrogation-bottom-bar">
-                <div class="status-item questions-status">
-                    <svg viewBox="0 0 24 24" width="20" height="20"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z" fill="#bfa168"/></svg>
-                    QUESTIONS USED: <span id="questions-used">0</span> / <span id="questions-total">30</span>
-                </div>
-                <div class="status-item time-status">
-                    TIME: <span id="game-time">00:00:00</span>
-                </div>
-            </div>
-
             <button id="mic-btn" class="mic-button">
                 <svg viewBox="0 0 24 24" width="40" height="40">
                     <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" fill="#2c1a0c"/>
                 </svg>
             </button>
+        </div>
+
+        <!-- Global bottom bar -->
+        <div id="global-bottom-bar" class="hidden">
+            <div class="status-item questions-status">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z" fill="#bfa168"/></svg>
+                QUESTIONS USED: <span id="questions-used">0</span> / <span id="questions-total">30</span>
+            </div>
+            <div class="status-item time-status">
+                TIME: <span id="game-time">00:00:00</span>
+            </div>
+            <button id="give-verdict-btn" class="hidden">GIVE VERDICT</button>
+        </div>
+
+        <!-- Error Popup Overlay -->
+        <div id="error-popup-overlay" class="hidden">
+            <div class="error-popup-box">
+                <h2 class="error-title">NOTICE</h2>
+                <p id="error-popup-msg"></p>
+                <button class="back-btn" id="error-popup-close">UNDERSTOOD</button>
+            </div>
+        </div>
+
+        <!-- Final Verdict Popup Overlay -->
+        <div id="verdict-popup-overlay" class="hidden">
+            <div class="verdict-popup-box">
+                <h2 class="verdict-title">FINAL VERDICT</h2>
+                <p class="verdict-subtitle">Who is the killer?</p>
+                <div class="verdict-suspects-grid">
+                    <div class="verdict-suspect-row row-3">
+                        <button class="verdict-suspect-btn" data-id="edward_hartwell">
+                            <div class="verdict-suspect-portrait" style="background-image: url('assets/headshots/EdwardHartell-Scaredguest.png')"></div>
+                            <div class="verdict-suspect-info">
+                                <div class="verdict-suspect-name">Edward Hartwell</div>
+                                <div class="verdict-suspect-role">Guest One</div>
+                            </div>
+                        </button>
+                        <button class="verdict-suspect-btn" data-id="thomas_blackwood">
+                            <div class="verdict-suspect-portrait" style="background-image: url('assets/headshots/ThomasBlackwood-SilentGuest.png')"></div>
+                            <div class="verdict-suspect-info">
+                                <div class="verdict-suspect-name">Thomas Blackwood</div>
+                                <div class="verdict-suspect-role">Guest Two</div>
+                            </div>
+                        </button>
+                        <button class="verdict-suspect-btn" data-id="victor_lancaster">
+                            <div class="verdict-suspect-portrait" style="background-image: url('assets/headshots/VictorLancaster-Butler.png')"></div>
+                            <div class="verdict-suspect-info">
+                                <div class="verdict-suspect-name">Victor Lancaster</div>
+                                <div class="verdict-suspect-role">The Butler</div>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="verdict-suspect-row row-2">
+                        <button class="verdict-suspect-btn" data-id="emma_graves">
+                            <div class="verdict-suspect-portrait" style="background-image: url('assets/headshots/EmmaGraves-Maid.png')"></div>
+                            <div class="verdict-suspect-info">
+                                <div class="verdict-suspect-name">Emma Graves</div>
+                                <div class="verdict-suspect-role">The Maid</div>
+                            </div>
+                        </button>
+                        <button class="verdict-suspect-btn" data-id="lady_beatrice_vale">
+                            <div class="verdict-suspect-portrait" style="background-image: url('assets/headshots/LadyBeatriceVale-WidowWife.png')"></div>
+                            <div class="verdict-suspect-info">
+                                <div class="verdict-suspect-name">Lady Beatrice Vale</div>
+                                <div class="verdict-suspect-role">The Widow Wife</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                <div class="verdict-actions">
+                    <button class="back-btn" id="verdict-close-btn">CANCEL</button>
+                    <button class="back-btn" id="verdict-submit-btn" disabled style="color: #ff3333; border-color: #ff3333;">LOCK VERDICT</button>
+                </div>
+            </div>
         </div>
 
         <!-- Journal UI -->

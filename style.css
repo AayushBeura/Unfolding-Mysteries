@@ -1198,18 +1198,35 @@ body, html {
     display: inline-block;
 }
 
-#interrogation-bottom-bar {
+#global-bottom-bar {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 70;
     display: flex;
     justify-content: center;
     align-items: center;
     background: rgba(10, 5, 2, 0.85);
     border-top: 1px solid #8e6d3c;
-    padding: 10px 40px;
-    gap: 40px;
+    border-left: 1px solid #8e6d3c;
+    border-right: 1px solid #8e6d3c;
+    padding: 1.5vh 3vw;
+    gap: 3vw;
     box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
     width: fit-content;
-    margin: 0 auto;
     border-radius: 5px 5px 0 0;
+    opacity: 0;
+    transition: auto;
+    pointer-events: none;
+}
+
+#global-bottom-bar.visible {
+    opacity: 1;
+}
+
+#global-bottom-bar.hidden {
+    display: none;
 }
 
 .status-item {
@@ -1252,4 +1269,221 @@ body, html {
 
 .mic-button:active {
     transform: translateX(-50%) scale(0.95);
+}
+
+/* Error Popup Overlay */
+#error-popup-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999999;
+    background: rgba(0,0,0,0.85);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+}
+
+#error-popup-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+#error-popup-overlay.hidden {
+    display: none !important;
+}
+
+.error-popup-box {
+    background: linear-gradient(to bottom, #2a0b0b 0%, #150505 100%);
+    border: 2px solid #ff4444;
+    padding: 30px 40px;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 500px;
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.4), inset 0 0 20px rgba(255,0,0,0.2);
+}
+
+.error-popup-box .error-title {
+    font-size: 2.5rem;
+    color: #ff6666;
+    margin: 0 0 15px 0;
+    font-family: 'Cinzel Decorative', serif;
+    text-shadow: 0 0 10px #ff0000;
+}
+
+#error-popup-msg {
+    font-family: 'Cinzel', serif;
+    font-size: 1.2rem;
+    color: #ffcccc;
+    line-height: 1.5;
+    margin-bottom: 25px;
+}
+
+/* Give Verdict Button */
+#give-verdict-btn {
+    background: linear-gradient(to bottom, #4a0f0f 0%, #2a0505 100%);
+    border: 2px solid #ff4444;
+    color: #ffcccc;
+    padding: 8px 20px;
+    font-family: 'Cinzel', serif;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s;
+    box-shadow: 0 0 10px rgba(255,0,0,0.5);
+    pointer-events: all;
+}
+
+#give-verdict-btn.hidden {
+    display: none !important;
+}
+
+#give-verdict-btn:hover {
+    color: #ffffff;
+    border-color: #ff0000;
+    background: linear-gradient(to bottom, #6a1515 0%, #3a0505 100%);
+    box-shadow: 0 0 20px rgba(255,0,0,0.8);
+    transform: scale(1.05);
+}
+
+/* Fixed Widths for Status Items */
+.questions-status {
+    min-width: 250px;
+    justify-content: center;
+}
+
+.time-status {
+    min-width: 150px;
+    justify-content: center;
+}
+
+#game-time, #questions-used, #questions-total {
+    font-variant-numeric: tabular-nums;
+    display: inline-block;
+}
+
+/* Verdict Popup Overlay */
+#verdict-popup-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999999;
+    background: rgba(0,0,0,0.85);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+}
+
+#verdict-popup-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+#verdict-popup-overlay.hidden {
+    display: none !important;
+}
+
+.verdict-popup-box {
+    background: linear-gradient(to bottom, #1a0f0a 0%, #0a0502 100%);
+    border: 2px solid #8e6d3c;
+    padding: 40px 50px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(142, 109, 60, 0.4), inset 0 0 20px rgba(142,109,60,0.2);
+}
+
+.verdict-title {
+    font-size: 3rem;
+    color: #e5cd96;
+    margin: 0 0 10px 0;
+    font-family: 'Cinzel Decorative', serif;
+    text-shadow: 0 0 15px #ffd700;
+}
+
+.verdict-subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: 1.2rem;
+    color: #bfa168;
+    margin-bottom: 30px;
+}
+
+.verdict-suspects-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.verdict-suspect-row {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.verdict-suspect-btn {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #8e6d3c;
+    color: #e5cd96;
+    padding: 10px;
+    font-family: 'Cinzel', serif;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s;
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.verdict-suspect-portrait {
+    width: 60px;
+    height: 60px;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid #5a4224;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0,0,0,0.8);
+}
+
+.verdict-suspect-name {
+    font-size: 1.1rem;
+    color: #e5cd96;
+    margin-bottom: 5px;
+}
+
+.verdict-suspect-role {
+    font-size: 0.85rem;
+    color: #a8946e;
+    font-style: italic;
+}
+
+.verdict-suspect-btn:hover:not(:disabled) {
+    background: rgba(142, 109, 60, 0.2);
+    color: #ffd700;
+    box-shadow: 0 0 10px rgba(142, 109, 60, 0.5);
+}
+
+.verdict-suspect-btn.selected {
+    background: linear-gradient(to bottom, #8e6d3c 0%, #5a3c1e 100%);
+    color: #fff;
+    border-color: #ffd700;
+    box-shadow: 0 0 15px #ffd700;
+}
+
+.verdict-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+#verdict-submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #aa3333 !important;
+    color: #aa3333 !important;
 }
