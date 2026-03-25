@@ -678,8 +678,155 @@ document.addEventListener('DOMContentLoaded', () => {
             rulesOverlay.classList.add('hidden');
             openJournalBtn.classList.remove('hidden'); 
             document.getElementById('in-game-settings-btn').classList.remove('hidden');
+            
+            // Show suspects screen
+            const suspectsScreen = document.getElementById('suspects-screen');
+            suspectsScreen.classList.remove('hidden');
+            setTimeout(() => {
+                suspectsScreen.classList.add('visible');
+                startGameTimer();
+            }, 50);
         }, 500);
     });
+
+    // --- Suspects and Interrogation System ---
+    const suspectsData = [
+        { id: 'edward_hartwell', name: 'Edward Hartwell', role: 'Guest One', status: 'NOT QUESTIONED', pic: 'scared-guest.png', interrogations: 0 },
+        { id: 'thomas_blackwood', name: 'Thomas Blackwood', role: 'Guest Two', status: 'NOT QUESTIONED', pic: 'silent-guest.png', interrogations: 0 },
+        { id: 'victor_lancaster', name: 'Victor Lancaster', role: 'The Butler', status: 'NOT QUESTIONED', pic: 'butler.png', interrogations: 0 },
+        { id: 'emma_graves', name: 'Emma Graves', role: 'The Maid', status: 'NOT QUESTIONED', pic: 'young-maid.png', interrogations: 0 },
+        { id: 'lady_beatrice_vale', name: 'Lady Beatrice Vale', role: 'The Widow Wife', status: 'NOT QUESTIONED', pic: 'widow.png', interrogations: 0 }
+    ];
+
+    let questionsUsed = 0;
+    let questionsTotal = 30;
+    
+    // Timer
+    let gameTimerInterval = null;
+    let gameTimeSeconds = 0;
+
+    function formatTime(totalSeconds) {
+        const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+        const s = (totalSeconds % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
+    }
+
+    function startGameTimer() {
+        if (gameTimerInterval) return;
+        gameTimerInterval = setInterval(() => {
+            gameTimeSeconds++;
+            document.getElementById('game-time').textContent = formatTime(gameTimeSeconds);
+        }, 1000);
+    }
+
+    function renderSuspects() {
+        const listDiv = document.getElementById('suspects-list');
+        listDiv.innerHTML = '';
+
+        suspectsData.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'suspect-card';
+            
+            // Note: I will use the actual images we have for the portraits.
+            card.innerHTML = `
+                <div class="suspect-portrait" style="background-image: url('assets/images/${s.pic}')"></div>
+                <div class="suspect-info">
+                    <h3 class="suspect-name">${s.name}</h3>
+                    <p class="suspect-role">${s.role}</p>
+                    <p class="suspect-status">STATUS: <span>${s.status}</span> (Times Interrogated: ${s.interrogations})</p>
+                </div>
+                <button class="interrogate-btn-card" data-id="${s.id}">INTERROGATE</button>
+            `;
+            listDiv.appendChild(card);
+        });
+
+        // Add event listeners to all buttons
+        document.querySelectorAll('.interrogate-btn-card').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const sid = e.target.getAttribute('data-id');
+                openInterrogation(sid);
+            });
+            // Attach click sound
+            btn.addEventListener('click', playClick);
+        });
+    }
+
+    let currentSuspectId = null;
+
+    function openInterrogation(suspectId) {
+        currentSuspectId = suspectId;
+        const suspect = suspectsData.find(s => s.id === suspectId);
+        
+        // Proper animation transition
+        blackOverlay.classList.remove('fade-out');
+        blackOverlay.classList.add('fade-in');
+        
+        setTimeout(() => {
+            // Hide suspects screen
+            document.getElementById('suspects-screen').classList.remove('visible');
+            setTimeout(() => {
+                document.getElementById('suspects-screen').classList.add('hidden');
+            }, 500);
+
+            // Prepare Interrogation UI
+            const interBg = document.getElementById('interrogation-bg');
+            interBg.style.backgroundImage = `url('assets/images/${suspect.pic}')`;
+            
+            // Add zoom animation class
+            interBg.classList.remove('interrogation-anim-zoom');
+            // Need a tiny timeout to re-trigger animation
+            setTimeout(() => { interBg.classList.add('interrogation-anim-zoom'); }, 50);
+
+            // Set up total questions allowed based on difficulty
+            if (selectedDifficulty === 'MEDIUM') questionsTotal = 25;
+            if (selectedDifficulty === 'HARD') questionsTotal = 20;
+            document.getElementById('questions-total').textContent = questionsTotal;
+            document.getElementById('questions-used').textContent = questionsUsed;
+
+            document.getElementById('interrogation-screen').classList.remove('hidden');
+            
+            // Fade out the black overlay
+            setTimeout(() => {
+                document.getElementById('interrogation-screen').classList.add('visible');
+                blackOverlay.classList.remove('fade-in');
+                blackOverlay.classList.add('fade-out');
+                
+                // Track interrogation
+                suspect.interrogations++;
+                if (suspect.status === 'NOT QUESTIONED') suspect.status = 'QUESTIONED';
+                renderSuspects(); // Re-render for next time
+            }, 1000);
+            
+        }, 1500); // Wait for black overlay to cover
+    }
+
+    document.getElementById('exit-interrogation-btn').addEventListener('click', () => {
+        // Transition back
+        blackOverlay.classList.remove('fade-out');
+        blackOverlay.classList.add('fade-in');
+
+        setTimeout(() => {
+            document.getElementById('interrogation-screen').classList.remove('visible');
+            setTimeout(() => {
+                document.getElementById('interrogation-screen').classList.add('hidden');
+                
+                // Show suspects
+                const suspectsScreen = document.getElementById('suspects-screen');
+                suspectsScreen.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    suspectsScreen.classList.add('visible');
+                    blackOverlay.classList.remove('fade-in');
+                    blackOverlay.classList.add('fade-out');
+                }, 100);
+                
+            }, 500);
+        }, 1500);
+    });
+
+    // Initial render
+    renderSuspects();
 
     // --- Journal System ---
     const journalWrapper = document.getElementById('journal-wrapper');

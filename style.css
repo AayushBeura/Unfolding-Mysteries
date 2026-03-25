@@ -908,3 +908,348 @@ body, html {
 #in-game-settings-btn.hidden {
     display: none !important;
 }
+
+/* Suspects Screen Base */
+#suspects-screen {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 40;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    pointer-events: none;
+}
+
+#suspects-screen.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+#suspects-screen.hidden {
+    display: none;
+}
+
+#suspects-bg {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: url('assets/images/murderarea-stencil.png');
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.6) contrast(1.2);
+    z-index: -1;
+}
+
+#suspects-container {
+    width: 30vw;
+    height: 85vh;
+    margin-left: 5vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    background: rgba(10, 5, 2, 0.85);
+    border-left: 3px solid #8e6d3c;
+    border-right: 1px solid rgba(142, 109, 60, 0.3);
+    padding: 3vh 2vw;
+    box-shadow: 10px 0 30px rgba(0,0,0,0.9);
+    position: relative;
+    overflow: hidden; /* No scrollbar */
+    box-sizing: border-box;
+}
+
+#suspects-container * {
+    /* Limit font scaling against zoom */
+    line-height: 1.2;
+}
+
+.suspects-main-title {
+    font-size: 3vh;
+    color: #e5cd96;
+    margin: 0;
+    text-shadow: 0 0 10px #000;
+    letter-spacing: 0.2vw;
+    font-family: 'Cinzel Decorative', serif;
+    border-bottom: 1px solid rgba(142, 109, 60, 0.5);
+    padding-bottom: 1vh;
+    flex-shrink: 0;
+}
+
+.suspects-subtitle {
+    font-family: sans-serif;
+    color: #bfa168;
+    margin-top: 1.5vh;
+    margin-bottom: 2vh;
+    font-size: 1.2vh;
+    flex-shrink: 0;
+}
+
+#suspects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2vh;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.suspect-card {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(to right, rgba(0,0,0,0.8), rgba(20, 10, 5, 0.4));
+    border: 1px solid #3a2c18;
+    border-radius: 5px;
+    padding: 1vh 1vw;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    flex: 1; /* Stretch uniformly to fit constraints */
+    max-height: 12vh;
+    box-sizing: border-box;
+}
+
+.suspect-card:hover {
+    border-color: #8e6d3c;
+    box-shadow: inset 0 0 15px rgba(142, 109, 60, 0.3), 0 0 10px rgba(0,0,0,0.8);
+    background: linear-gradient(to right, rgba(30, 20, 10, 0.9), rgba(40, 20, 10, 0.5));
+}
+
+.suspect-portrait {
+    width: 6vh;
+    height: 6vh;
+    min-width: 6vh;
+    min-height: 6vh;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid #5a4224;
+    border-radius: 3px;
+    margin-right: 1vw;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+}
+
+.suspect-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    justify-content: center;
+}
+
+.suspect-name {
+    font-family: 'Cinzel', serif;
+    font-size: 2vh;
+    color: #e5cd96;
+    margin: 0 0 0.5vh 0;
+    text-shadow: 0 0 5px #000;
+}
+
+.suspect-role {
+    font-family: 'Cinzel', serif;
+    font-style: italic;
+    color: #a8946e;
+    margin: 0 0 0.8vh 0;
+    font-size: 1.5vh;
+}
+
+.suspect-status {
+    font-family: sans-serif;
+    font-size: 1vh;
+    color: #bfa168;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0;
+}
+
+.suspect-status span {
+    color: #8e6d3c;
+}
+
+.interrogate-btn-card {
+    position: absolute;
+    right: 1vw;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: 1px solid #8e6d3c;
+    color: #e5cd96;
+    padding: 0.8vh 1vw;
+    font-family: 'Cinzel', serif;
+    font-size: 1.2vh;
+    cursor: pointer;
+    opacity: 0; /* hidden until hover */
+    transition: all 0.3s ease;
+    border-radius: 3px;
+}
+
+.suspect-card:hover .interrogate-btn-card {
+    opacity: 1;
+}
+
+.interrogate-btn-card:hover {
+    background: rgba(142, 109, 60, 0.2);
+    box-shadow: 0 0 10px rgba(142, 109, 60, 0.5);
+    color: #ffd700;
+}
+
+/* Interrogation Screen */
+#interrogation-screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 55;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    pointer-events: none;
+}
+
+#interrogation-screen.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+#interrogation-screen.hidden {
+    display: none;
+}
+
+#interrogation-bg {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: black;
+    background-size: cover;
+    background-position: center;
+    z-index: -1;
+    transition: transform 15s linear, filter 1s ease;
+    filter: brightness(0.7) contrast(1.1);
+}
+
+.interrogation-anim-zoom {
+    transform: scale(1.1);
+}
+
+#interrogation-header {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px 40px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+}
+
+.top-left-controls {
+    position: absolute;
+    top: 20px;
+    left: 40px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.interrogation-btn {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #8e6d3c;
+    color: #bfa168;
+    padding: 8px 15px;
+    font-family: 'Cinzel', serif;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-radius: 3px;
+}
+
+.interrogation-btn:hover {
+    color: #e5cd96;
+    background: rgba(142, 109, 60, 0.2);
+    box-shadow: 0 0 10px rgba(142, 109, 60, 0.5);
+}
+
+.location-text {
+    font-family: 'Cinzel', serif;
+    color: #bfa168;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    text-shadow: 0 0 5px #000;
+}
+
+.interrogation-titles {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.interrogation-title {
+    font-size: 3rem;
+    color: #e5cd96;
+    margin: 0 0 10px 0;
+    text-shadow: 0 0 15px #ffd700;
+    font-family: 'Cinzel Decorative', serif;
+    letter-spacing: 5px;
+}
+
+.interrogation-case {
+    font-family: 'Cinzel', serif;
+    color: #bfa168;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    border-top: 1px solid rgba(142, 109, 60, 0.4);
+    border-bottom: 1px solid rgba(142, 109, 60, 0.4);
+    padding: 5px 20px;
+    background: rgba(0,0,0,0.4);
+    display: inline-block;
+}
+
+#interrogation-bottom-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(10, 5, 2, 0.85);
+    border-top: 1px solid #8e6d3c;
+    padding: 10px 40px;
+    gap: 40px;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+    width: fit-content;
+    margin: 0 auto;
+    border-radius: 5px 5px 0 0;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Cinzel', serif;
+    color: #e5cd96;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+}
+
+#questions-used, #questions-total, #game-time {
+    color: #ffd700;
+}
+
+.mic-button {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffd700, #b8860b, #ffd700);
+    border: 3px solid #ffeb8c;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(255,255,255,0.8);
+    transition: all 0.3s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mic-button:hover {
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), inset 0 0 15px rgba(255,255,255,1);
+    filter: brightness(1.2);
+}
+
+.mic-button:active {
+    transform: translateX(-50%) scale(0.95);
+}

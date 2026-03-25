@@ -163,6 +163,52 @@
             <button class="back-btn" id="accept-rules-btn">UNDERSTOOD</button>
         </div>
 
+        <!-- Suspects Screen -->
+        <div id="suspects-screen" class="hidden">
+            <!-- Background will be set in CSS -->
+            <div id="suspects-bg"></div>
+            <div id="suspects-container">
+                <h2 class="suspects-main-title">SUSPECTS</h2>
+                <p class="suspects-subtitle">Select a suspect to begin the interrogation.</p>
+                <div id="suspects-list">
+                    <!-- Cards will be dynamically injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Interrogation Screen -->
+        <div id="interrogation-screen" class="hidden">
+            <div id="interrogation-bg"></div>
+            <div id="interrogation-header">
+                <div class="top-left-controls">
+                    <button id="exit-interrogation-btn" class="interrogation-btn">EXIT INTERROGATION</button>
+                    <!-- "LOCATION: ARTHUR'S STUDY" could also go here in design -->
+                    <span class="location-text"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#bfa168"/></svg> LOCATION: ARTHUR'S STUDY</span>
+                </div>
+                <div class="interrogation-titles">
+                    <h2 class="interrogation-title">INTERROGATION</h2>
+                    <div class="interrogation-case">CASE:<br>THE MURDER AT BLACKTHORN MANOR</div>
+                </div>
+            </div>
+
+            <!-- Interrogation bottom bar -->
+            <div id="interrogation-bottom-bar">
+                <div class="status-item questions-status">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z" fill="#bfa168"/></svg>
+                    QUESTIONS USED: <span id="questions-used">0</span> / <span id="questions-total">30</span>
+                </div>
+                <div class="status-item time-status">
+                    TIME: <span id="game-time">00:00:00</span>
+                </div>
+            </div>
+
+            <button id="mic-btn" class="mic-button">
+                <svg viewBox="0 0 24 24" width="40" height="40">
+                    <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" fill="#2c1a0c"/>
+                </svg>
+            </button>
+        </div>
+
         <!-- Journal UI -->
         <div id="journal-wrapper" class="hidden">
             <div id="journal-book">
