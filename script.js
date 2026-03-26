@@ -23,6 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const thunderRain = document.getElementById('thunder-rain');
     const storyOverlay = document.getElementById('story-overlay');
     const storyText = document.getElementById('story-text');
+    const gameMusic = document.getElementById('game-music');
+
+    // Configurable Game Music Constants
+    const MUSIC_VOL_NORMAL = 0.40;
+    const MUSIC_VOL_INTERROGATION = 0.20;
     
     // Global state
     let targetMusicVol = 1.0;
@@ -243,8 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show Story text overlay once background is black
         setTimeout(() => {
             if (isCutsceneSkipped) return;
-            skipPreludeBtn.classList.remove('hidden');
-            skipPreludeBtn.style.zIndex = '99999';
             storyOverlay.classList.remove('hidden');
             storyOverlay.style.zIndex = '99998';
             setTimeout(() => {
@@ -264,6 +267,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (isCutsceneSkipped) return;
                             storyOverlay.classList.add('hidden');
                             startCutsceneSequence(); // ONLY START THIS AFTER STORY OVERLAY IS GONE
+                            
+                            setTimeout(() => {
+                                if (isCutsceneSkipped) return;
+                                skipPreludeBtn.classList.remove('hidden');
+                                skipPreludeBtn.style.zIndex = '99999';
+                            }, 7500);
                         }, 2000);
                     }, 3500); 
                 });
@@ -497,6 +506,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', (e) => {
             selectedDifficulty = e.target.textContent.trim().toUpperCase();
 
+            if (!localStorage.getItem('murf-key-validated') || !localStorage.getItem('ai-key-validated')) {
+                showErrorPopup("Please configure and validate your AI Provider and Murf API keys in Settings before starting the game.");
+                return;
+            }
+
             // Synchronously authorize all cutscene audios explicitly inside a user gesture
             cutsceneAudioElements.forEach(aud => {
                 aud.muted = true;
@@ -558,6 +572,79 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('settings-quit-btn').addEventListener('click', () => { window.close(); });
     document.getElementById('settings-home-btn').addEventListener('click', () => { window.location.reload(); });
 
+    // API Key Validation Logic
+    const aiProviderSelect = document.getElementById('ai-provider-select');
+    const aiKeyInput = document.getElementById('ai-key');
+    const murfKeyInput = document.getElementById('murf-key');
+    const validateAiKeyBtn = document.getElementById('validate-ai-key');
+    const validateMurfKeyBtn = document.getElementById('validate-murf-key');
+
+    if (localStorage.getItem('ai-provider')) {
+        aiProviderSelect.value = localStorage.getItem('ai-provider');
+    }
+    if (localStorage.getItem('ai-key-validated')) {
+        aiKeyInput.value = localStorage.getItem('ai-key-validated');
+        validateAiKeyBtn.textContent = 'VALID';
+        validateAiKeyBtn.style.color = '#5cb85c';
+        validateAiKeyBtn.style.borderColor = '#5cb85c';
+    }
+    if (localStorage.getItem('murf-key-validated')) {
+        murfKeyInput.value = localStorage.getItem('murf-key-validated');
+        validateMurfKeyBtn.textContent = 'VALID';
+        validateMurfKeyBtn.style.color = '#5cb85c';
+        validateMurfKeyBtn.style.borderColor = '#5cb85c';
+    }
+
+    aiProviderSelect.addEventListener('change', () => {
+        localStorage.setItem('ai-provider', aiProviderSelect.value);
+        localStorage.removeItem('ai-key-validated');
+        aiKeyInput.value = '';
+        validateAiKeyBtn.textContent = 'VALIDATE';
+        validateAiKeyBtn.style.color = '';
+        validateAiKeyBtn.style.borderColor = '';
+    });
+
+    validateAiKeyBtn.addEventListener('click', () => {
+        const val = aiKeyInput.value.trim();
+        if (val.length > 5) { // Simple validation
+            localStorage.setItem('ai-key-validated', val);
+            localStorage.setItem('ai-provider', aiProviderSelect.value);
+            validateAiKeyBtn.textContent = 'VALID';
+            validateAiKeyBtn.style.color = '#5cb85c';
+            validateAiKeyBtn.style.borderColor = '#5cb85c';
+            if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
+        } else {
+            showErrorPopup("Invalid AI Provider API Key!");
+        }
+    });
+
+    validateMurfKeyBtn.addEventListener('click', () => {
+        const val = murfKeyInput.value.trim();
+        if (val.length > 5) {
+            localStorage.setItem('murf-key-validated', val);
+            validateMurfKeyBtn.textContent = 'VALID';
+            validateMurfKeyBtn.style.color = '#5cb85c';
+            validateMurfKeyBtn.style.borderColor = '#5cb85c';
+            if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
+        } else {
+            showErrorPopup("Invalid Murf API Key!");
+        }
+    });
+
+    aiKeyInput.addEventListener('input', () => {
+        validateAiKeyBtn.textContent = 'VALIDATE';
+        validateAiKeyBtn.style.color = '';
+        validateAiKeyBtn.style.borderColor = '';
+        localStorage.removeItem('ai-key-validated');
+    });
+    
+    murfKeyInput.addEventListener('input', () => {
+        validateMurfKeyBtn.textContent = 'VALIDATE';
+        validateMurfKeyBtn.style.color = '';
+        validateMurfKeyBtn.style.borderColor = '';
+        localStorage.removeItem('murf-key-validated');
+    });
+
     // Volume Control Logic
     const masterVol = document.getElementById('master-vol');
     const audioVol = document.getElementById('audio-vol');
@@ -576,6 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let musicVolumeValue = 1.0;
 
     let activeCutsceneAudio = null;
+    let currentGameMusicBaseMultiplier = MUSIC_VOL_NORMAL;
 
     function updateVolumes() {
         let actualMusicVol = (isMasterMuted || isMusicMuted) ? 0 : masterVolumeValue * musicVolumeValue;
@@ -584,10 +672,12 @@ document.addEventListener('DOMContentLoaded', () => {
         introMusic.dataset.targetVolume = actualMusicVol; 
         
         thunderRain.dataset.targetVolume = actualMusicVol * 0.45;
+        if(gameMusic) gameMusic.dataset.targetVolume = actualMusicVol * currentGameMusicBaseMultiplier;
         
         targetMusicVol = actualMusicVol;
         introMusic.volume = actualMusicVol;
         thunderRain.volume = actualMusicVol * 0.45;
+        if(gameMusic) gameMusic.volume = actualMusicVol * currentGameMusicBaseMultiplier;
         
         clickSfx.volume = actualAudioVol;
 
@@ -695,6 +785,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 suspectsScreen.classList.add('visible');
                 globalBottomBar.classList.add('visible');
                 startGameTimer();
+
+                currentGameMusicBaseMultiplier = MUSIC_VOL_NORMAL;
+                updateVolumes();
+                fadeInAudio(gameMusic, 2000, targetMusicVol * MUSIC_VOL_NORMAL);
             }, 50);
         }, 500);
     });
@@ -799,6 +893,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('interrogation-screen').classList.add('visible');
                 blackOverlay.classList.remove('fade-in');
                 blackOverlay.classList.add('fade-out');
+
+                currentGameMusicBaseMultiplier = MUSIC_VOL_INTERROGATION;
+                updateVolumes();
             }, 1000);
             
         }, 1500); // Wait for black overlay to cover
@@ -924,6 +1021,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Show suspects
                 const suspectsScreen = document.getElementById('suspects-screen');
                 suspectsScreen.classList.remove('hidden');
+                
+                currentGameMusicBaseMultiplier = MUSIC_VOL_NORMAL;
+                updateVolumes();
                 
                 setTimeout(() => {
                     suspectsScreen.classList.add('visible');

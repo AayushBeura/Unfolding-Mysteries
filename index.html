@@ -116,13 +116,23 @@
                 
                 <div id="developer-options">
                     <h3 class="dev-title">DEVELOPER OPTIONS</h3>
-                    <div class="setting-group">
-                        <label>GEMINI API KEY</label>
-                        <input type="password" class="styled-input" id="gemini-key" placeholder="Enter key...">
+                    <div class="setting-group" style="flex-direction: column; align-items: flex-start; gap: 5px;">
+                        <label>AI PROVIDER API KEY</label>
+                        <select id="ai-provider-select" class="styled-input" style="width: 100%; margin-bottom: 5px; background: rgba(0,0,0,0.5); color: #ffebd6; border: 1px solid #bfa168;">
+                            <option value="gemini">Gemini</option>
+                            <option value="cerebras">Cerebras</option>
+                        </select>
+                        <div style="display: flex; width: 100%; gap: 10px;">
+                            <input type="password" class="styled-input" id="ai-key" placeholder="Enter API key..." style="flex: 1;">
+                            <button id="validate-ai-key" class="back-btn" style="margin-top: 0; padding: 5px 15px;">VALIDATE</button>
+                        </div>
                     </div>
-                    <div class="setting-group">
+                    <div class="setting-group" style="flex-direction: column; align-items: flex-start; gap: 5px;">
                         <label>MURF API KEY</label>
-                        <input type="password" class="styled-input" id="murf-key" placeholder="Enter key...">
+                        <div style="display: flex; width: 100%; gap: 10px;">
+                            <input type="password" class="styled-input" id="murf-key" placeholder="Enter Murf key..." style="flex: 1;">
+                            <button id="validate-murf-key" class="back-btn" style="margin-top: 0; padding: 5px 15px;">VALIDATE</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -301,6 +311,7 @@
     <audio id="intro-music" src="assets/audios/IntroMusic.mp3" loop></audio>
     <audio id="click-sfx" src="assets/audios/click.mp3"></audio>
     <audio id="thunder-rain" src="assets/audios/thunderrain.mp3" loop></audio>
+    <audio id="game-music" src="assets/audios/GameMusicBG.mp3" loop></audio>
 
     <script src="script.js"></script>
 </body>
