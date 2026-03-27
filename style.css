@@ -384,6 +384,13 @@ body, html {
     pointer-events: none;
 }
 
+/* When opened during active gameplay, blur+darken the background */
+#settings-overlay.ingame-backdrop {
+    backdrop-filter: blur(10px) brightness(0.55);
+    -webkit-backdrop-filter: blur(10px) brightness(0.55);
+    background: rgba(0, 0, 0, 0.45);
+}
+
 #settings-overlay.hidden {
     display: none;
 }
@@ -409,6 +416,24 @@ body, html {
     padding: 30px 50px;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.9);
     width: 400px;
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.settings-content::-webkit-scrollbar {
+    width: 8px;
+}
+.settings-content::-webkit-scrollbar-track {
+    background: rgba(44, 26, 12, 0.5);
+    border-radius: 4px;
+    margin: 10px 0;
+}
+.settings-content::-webkit-scrollbar-thumb {
+    background: #8e6d3c;
+    border-radius: 4px;
+}
+.settings-content::-webkit-scrollbar-thumb:hover {
+    background: #ffd700;
 }
 
 .dev-title {
@@ -605,6 +630,82 @@ body, html {
     color: #e5cd96;
     margin: 0;
     text-shadow: 0 0 5px #000;
+}
+
+#transcript-overlay {
+    position: absolute;
+    bottom: 160px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    width: 70%;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    transition: opacity 1s ease-in-out;
+}
+
+#transcript-overlay.hidden { display: none; }
+
+#transcript-box {
+    background: rgba(10, 5, 2, 0.9);
+    border: 2px solid #8e6d3c;
+    border-radius: 8px;
+    padding: 20px 30px;
+    min-width: 300px;
+    text-align: center;
+    transition: border-color 0.5s, box-shadow 0.5s;
+    box-shadow: 0 0 15px rgba(0,0,0,0.8);
+}
+
+#transcript-text {
+    font-family: 'Cinzel', serif;
+    font-size: 1.5rem;
+    color: #e5cd96;
+    margin: 0;
+    text-shadow: 0 0 5px #000;
+}
+
+.transcript-indicator {
+    font-family: sans-serif;
+    font-size: 0.8rem;
+    color: #8e6d3c;
+    margin-top: 10px;
+}
+
+@keyframes blinkingGlow {
+    0% { box-shadow: 0 0 5px rgba(229, 205, 150, 0.2); border-color: #8e6d3c; }
+    50% { box-shadow: 0 0 25px rgba(229, 205, 150, 0.8); border-color: #e5cd96; }
+    100% { box-shadow: 0 0 5px rgba(229, 205, 150, 0.2); border-color: #8e6d3c; }
+}
+
+#transcript-box.blinking-glow {
+    animation: blinkingGlow 1.5s infinite;
+}
+
+#transcript-box.completed-green {
+    border-color: #5cb85c;
+    box-shadow: 0 0 20px rgba(92, 184, 92, 0.6);
+}
+
+#transcript-box.completed-green #transcript-text {
+    color: #d1f2d1;
+}
+
+#transcript-overlay.fade-out-anim {
+    opacity: 0;
+}
+
+.mic-button.recording {
+    background-color: #4a0000 !important;
+    border-color: #ff0000 !important;
+    animation: pulseRed 1s infinite;
+}
+
+@keyframes pulseRed {
+    0% { box-shadow: 0 0 5px #ff0000; }
+    50% { box-shadow: 0 0 20px #ff0000; }
+    100% { box-shadow: 0 0 5px #ff0000; }
 }
 
 
@@ -1245,7 +1346,7 @@ body, html {
 
 .mic-button {
     position: absolute;
-    bottom: 80px;
+    bottom: 60px;
     left: 50%;
     transform: translateX(-50%);
     width: 80px;

@@ -29,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const MUSIC_VOL_NORMAL = 0.40;
     const MUSIC_VOL_INTERROGATION = 0.20;
     
+    // Request Mic permission variable locally configured, execution moved to Start screen
+    let globalMicStream = null;
     // Global state
     let targetMusicVol = 1.0;
     let selectedDifficulty = 'EASY';
@@ -151,6 +153,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Main experience trigger
     async function startExperience() {
+        if (!globalMicStream) {
+            try {
+                fsBtn.textContent = 'WAITING FOR MICROPHONE ACCESS';
+                globalMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (err) {
+                alert("Microphone permission is strictly required to interrogate suspects.");
+                fsBtn.textContent = 'START EXPERIENCE';
+                return;
+            }
+        }
+
         try {
             if (!document.fullscreenElement) {
                 if (document.documentElement.requestFullscreen) {
@@ -506,8 +519,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', (e) => {
             selectedDifficulty = e.target.textContent.trim().toUpperCase();
 
-            if (!localStorage.getItem('murf-key-validated') || !localStorage.getItem('ai-key-validated')) {
-                showErrorPopup("Please configure and validate your AI Provider and Murf API keys in Settings before starting the game.");
+            if (!localStorage.getItem('murf-key-validated') || !localStorage.getItem('ai-key-validated') || !localStorage.getItem('assembly-key-validated')) {
+                showErrorPopup("Please configure and validate your AI Provider, Murf, and Assembly AI API keys in Settings before starting the game.");
                 return;
             }
 
@@ -554,6 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('in-game-settings-btn').addEventListener('click', () => {
         document.getElementById('developer-options').style.display = 'none';
         document.getElementById('settings-home-btn').classList.remove('hidden'); // Guarantee Home Page is active in-game
+        settingsOverlay.classList.add('ingame-backdrop'); // blur & darken game behind settings
         settingsOverlay.classList.remove('hidden');
         setTimeout(() => {
             settingsOverlay.classList.add('visible');
@@ -564,6 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsOverlay.classList.remove('visible');
         setTimeout(() => {
             settingsOverlay.classList.add('hidden');
+            settingsOverlay.classList.remove('ingame-backdrop'); // restore game view
             bgImg.classList.remove('blurred');
             content.classList.remove('blurred');
         }, 500);
@@ -576,8 +591,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiProviderSelect = document.getElementById('ai-provider-select');
     const aiKeyInput = document.getElementById('ai-key');
     const murfKeyInput = document.getElementById('murf-key');
+    const assemblyKeyInput = document.getElementById('assembly-key');
     const validateAiKeyBtn = document.getElementById('validate-ai-key');
     const validateMurfKeyBtn = document.getElementById('validate-murf-key');
+    const validateAssemblyKeyBtn = document.getElementById('validate-assembly-key');
 
     if (localStorage.getItem('ai-provider')) {
         aiProviderSelect.value = localStorage.getItem('ai-provider');
@@ -593,6 +610,12 @@ document.addEventListener('DOMContentLoaded', () => {
         validateMurfKeyBtn.textContent = 'VALID';
         validateMurfKeyBtn.style.color = '#5cb85c';
         validateMurfKeyBtn.style.borderColor = '#5cb85c';
+    }
+    if (localStorage.getItem('assembly-key-validated')) {
+        assemblyKeyInput.value = localStorage.getItem('assembly-key-validated');
+        validateAssemblyKeyBtn.textContent = 'VALID';
+        validateAssemblyKeyBtn.style.color = '#5cb85c';
+        validateAssemblyKeyBtn.style.borderColor = '#5cb85c';
     }
 
     aiProviderSelect.addEventListener('change', () => {
@@ -631,6 +654,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    validateAssemblyKeyBtn.addEventListener('click', () => {
+        const val = assemblyKeyInput.value.trim();
+        if (val.length > 5) {
+            localStorage.setItem('assembly-key-validated', val);
+            validateAssemblyKeyBtn.textContent = 'VALID';
+            validateAssemblyKeyBtn.style.color = '#5cb85c';
+            validateAssemblyKeyBtn.style.borderColor = '#5cb85c';
+            if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
+        } else {
+            showErrorPopup("Invalid Assembly AI API Key!");
+        }
+    });
+
     aiKeyInput.addEventListener('input', () => {
         validateAiKeyBtn.textContent = 'VALIDATE';
         validateAiKeyBtn.style.color = '';
@@ -643,6 +679,13 @@ document.addEventListener('DOMContentLoaded', () => {
         validateMurfKeyBtn.style.color = '';
         validateMurfKeyBtn.style.borderColor = '';
         localStorage.removeItem('murf-key-validated');
+    });
+
+    assemblyKeyInput.addEventListener('input', () => {
+        validateAssemblyKeyBtn.textContent = 'VALIDATE';
+        validateAssemblyKeyBtn.style.color = '';
+        validateAssemblyKeyBtn.style.borderColor = '';
+        localStorage.removeItem('assembly-key-validated');
     });
 
     // Volume Control Logic
@@ -744,7 +787,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <p>2. You have a strict limit of <strong>${questionsAllowed}</strong> interrogations before you must lock in your final verdict.</p>
             <p>3. Verdict Condition: You must ask at least one question to EACH of the 5 suspects in the mansion.</p>
             <p>4. The Investigator's Log (Journal) allows you to document inconsistencies, alibis, and timelines. Once a page turns, it cannot be edited backwards.</p>
-            <p>5. Time is ticking. The fog is thickening. The killer is watching.</p>
+            <p>5. Maximum 30 Words Command: For each question, you can use at max 30 words. Any additional words will be completely ignored by the suspects, so plan your queries carefully before you speak.</p>
+            <p>6. Time is ticking. The fog is thickening. The killer is watching.</p>
         `;
 
         rulesOverlay.classList.remove('hidden');
@@ -972,12 +1016,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Can transition to ending sequence here based on selected verdict
     });
 
+    let isRecording = false;
+    let socket = null;
+    let audioContext = null;
+    let scriptProcessor = null;
+
     // Mic button click inside interrogation
-    document.getElementById('mic-btn').addEventListener('click', () => {
+    document.getElementById('mic-btn').addEventListener('click', async () => {
         if (!currentSuspectId) return;
         
         const suspect = suspectsData.find(s => s.id === currentSuspectId);
         if (!suspect) return;
+
+        if (isRecording) {
+            // Handled by pause logic
+            return; 
+        }
 
         // Check if questions are exhausted
         if (questionsUsed >= questionsTotal) {
@@ -995,18 +1049,162 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const apiKey = localStorage.getItem('assembly-key-validated');
+        if (!apiKey) {
+            showErrorPopup("Assembly AI API key is missing. Please configure it in Settings.");
+            return;
+        }
+
+        const transcriptOverlay = document.getElementById('transcript-overlay');
+        const transcriptBox = document.getElementById('transcript-box');
+        const transcriptText = document.getElementById('transcript-text');
+        const indicator = document.querySelector('.transcript-indicator');
+        
+        transcriptOverlay.classList.remove('hidden');
+        transcriptOverlay.classList.remove('fade-out-anim');
+        transcriptBox.classList.remove('completed-green');
+        transcriptBox.classList.add('blinking-glow');
+        transcriptText.textContent = '';
+        indicator.style.display = 'block';
+        indicator.textContent = 'Connecting to Universal-3 Pro...';
+
+        isRecording = true;
+        document.getElementById('mic-btn').classList.add('recording');
+
+        let pauseTimer;
+        let currentRecognizedText = "";
+
+        const finishSession = () => {
+            if (!isRecording) return;
+            isRecording = false;
+            document.getElementById('mic-btn').classList.remove('recording');
+            
+            if (socket) socket.close();
+            if (scriptProcessor) scriptProcessor.disconnect();
+            if (audioContext && audioContext.state !== 'closed') audioContext.close();
+            
+            clearTimeout(pauseTimer);
+            indicator.style.display = 'none';
+
+            if (!transcriptText.textContent.trim()) {
+                // Nothing recorded/typed
+                transcriptOverlay.classList.add('fade-out-anim');
+                setTimeout(() => transcriptOverlay.classList.add('hidden'), 1000);
+                return;
+            }
+
+            // Finish nicely
+            transcriptBox.classList.remove('blinking-glow');
+            transcriptBox.classList.add('completed-green');
+            incrementQuestionCount();
+
+            setTimeout(() => {
+                transcriptOverlay.classList.add('fade-out-anim');
+                setTimeout(() => {
+                    transcriptOverlay.classList.add('hidden');
+                }, 1000);
+            }, 1000);
+        };
+
+        const resetPauseTimer = () => {
+            clearTimeout(pauseTimer);
+            transcriptBox.classList.remove('blinking-glow');
+            pauseTimer = setTimeout(() => {
+                finishSession();
+            }, 3500); // 3.5s pause required to ensure network latency doesn't clip the sentence
+        };
+
+        try {
+            // Using token query parameter assuming standard websocket bypassing of impossible HTTP Authorization headers
+            const API_ENDPOINT = `wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&speech_model=u3-rt-pro&token=${apiKey}`;
+            socket = new WebSocket(API_ENDPOINT);
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    const msgType = data.type;
+
+                    if (msgType === "Begin") {
+                        indicator.textContent = 'Listening (Speak now)...';
+                    } else if (msgType === "Turn") {
+                        const transcript = data.transcript || "";
+                        if (transcript) {
+                            // Flushes prior utterance chunks replacing them completely instead of appending natively.
+                            currentRecognizedText = transcript;
+                            transcriptText.textContent = currentRecognizedText;
+                            resetPauseTimer();
+
+                            if (currentRecognizedText.trim().split(/\s+/).length > 30) {
+                                transcriptText.textContent = currentRecognizedText.trim().split(/\s+/).slice(0, 30).join(' ');
+                                finishSession();
+                            }
+                        }
+                    } else if (msgType === "Termination") {
+                        finishSession();
+                    }
+                } catch (e) {
+                    console.error("AssemblyAI Parsing Error:", e);
+                }
+            };
+
+            socket.onopen = async () => {
+                indicator.textContent = 'Speak now...';
+                if (!globalMicStream) {
+                    globalMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                }
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                let source = audioContext.createMediaStreamSource(globalMicStream);
+                scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+                
+                source.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+                
+                scriptProcessor.onaudioprocess = (e) => {
+                    if (!isRecording || socket.readyState !== WebSocket.OPEN) return;
+                    let inputData = e.inputBuffer.getChannelData(0);
+                    let pcm16 = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        let s = Math.max(-1, Math.min(1, inputData[i]));
+                        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+                    socket.send(pcm16.buffer); // Binary payload mandated by V3 Engine
+                };
+
+                transcriptBox.classList.add('blinking-glow');
+                pauseTimer = setTimeout(() => {
+                    finishSession(); 
+                }, 5000);
+            };
+
+            socket.onerror = (e) => {
+                showErrorPopup("AssemblyAI Universal-3 Connection Error.");
+                finishSession();
+            };
+
+        } catch (err) {
+            showErrorPopup("Microphone system or Connection error.");
+            isRecording = false;
+            document.getElementById('mic-btn').classList.remove('recording');
+        }
+    });
+
+    function incrementQuestionCount() {
+        if (!currentSuspectId) return;
+        const suspect = suspectsData.find(s => s.id === currentSuspectId);
+        
         questionsUsed++;
         document.getElementById('questions-used').textContent = questionsUsed;
         
         suspect.interrogations++;
         if (suspect.status === 'NOT QUESTIONED') suspect.status = 'QUESTIONED';
-        renderSuspects(); // Re-render in background immediately
+        renderSuspects(); 
         checkVerdictCondition();
 
         if (questionsUsed >= questionsTotal) {
             showErrorPopup("All questions have been exhausted. You cannot interrogate any further. You must now give your final verdict.");
         }
-    });
+    }
 
     document.getElementById('exit-interrogation-btn').addEventListener('click', () => {
         // Transition back
