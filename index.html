@@ -185,8 +185,13 @@
             <!-- Background will be set in CSS -->
             <div id="suspects-bg"></div>
             <div id="suspects-container">
-                <h2 class="suspects-main-title">SUSPECTS</h2>
-                <p class="suspects-subtitle">Select a suspect to begin the interrogation.</p>
+                <div class="suspects-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h2 class="suspects-main-title" style="margin-bottom: 5px;">SUSPECTS</h2>
+                        <p class="suspects-subtitle">Select a suspect to begin the interrogation.</p>
+                    </div>
+                    <button id="give-verdict-btn" class="hidden">GIVE VERDICT</button>
+                </div>
                 <div id="suspects-list">
                     <!-- Cards will be dynamically injected by JS -->
                 </div>
@@ -199,8 +204,7 @@
             <div id="interrogation-header">
                 <div class="top-left-controls">
                     <button id="exit-interrogation-btn" class="interrogation-btn">EXIT INTERROGATION</button>
-                    <!-- "LOCATION: ARTHUR'S STUDY" could also go here in design -->
-                    <span class="location-text"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#bfa168"/></svg> LOCATION: ARTHUR'S STUDY</span>
+                    <span class="location-text" id="interrogation-suspect-name"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#bfa168"/></svg> SUSPECT NAME</span>
                 </div>
                 <div class="interrogation-titles">
                     <h2 class="interrogation-title">INTERROGATION</h2>
@@ -231,7 +235,6 @@
             <div class="status-item time-status">
                 TIME: <span id="game-time">00:00:00</span>
             </div>
-            <button id="give-verdict-btn" class="hidden">GIVE VERDICT</button>
         </div>
 
         <!-- Error Popup Overlay -->
@@ -292,6 +295,25 @@
                 <div class="verdict-actions">
                     <button class="back-btn" id="verdict-close-btn">CANCEL</button>
                     <button class="back-btn" id="verdict-submit-btn" disabled style="color: #ff3333; border-color: #ff3333;">LOCK VERDICT</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Result Overlay -->
+        <div id="result-overlay" class="hidden">
+            <div class="result-box">
+                <h2 id="result-title">CASE CLOSED</h2>
+                <div class="result-killer-reveal">
+                    <div id="killer-portrait" class="killer-reveal-portrait"></div>
+                    <p id="killer-name-display"></p>
+                </div>
+                <div class="result-stats">
+                    <p>TIME ELAPSED: <span id="final-time"></span></p>
+                    <p>INTERROGATIONS: <span id="final-interrogations"></span></p>
+                </div>
+                <div class="result-actions">
+                    <button class="back-btn" id="play-again-btn">PLAY AGAIN</button>
+                    <button class="back-btn" id="result-quit-btn" style="color: #ff3333; border-color: #ff3333;">QUIT</button>
                 </div>
             </div>
         </div>

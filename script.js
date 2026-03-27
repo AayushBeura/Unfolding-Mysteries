@@ -515,14 +515,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return aud;
     });
 
+    let generatedInstructions = {};
+    let chatHistories = {};
+    let killerName = "";
+    
     diffBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
             selectedDifficulty = e.target.textContent.trim().toUpperCase();
 
             if (!localStorage.getItem('murf-key-validated') || !localStorage.getItem('ai-key-validated') || !localStorage.getItem('assembly-key-validated')) {
                 showErrorPopup("Please configure and validate your AI Provider, Murf, and Assembly AI API keys in Settings before starting the game.");
                 return;
             }
+
+            // Fire async generate story request in background
+            const provider = localStorage.getItem('ai-provider') || 'gemini';
+            const apiKey = localStorage.getItem('ai-key-validated');
+            fetch('http://localhost:3000/api/generate-story', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider, apiKey, difficulty: selectedDifficulty })
+            }).then(res => res.json()).then(data => {
+                if(data.instructions) {
+                   generatedInstructions = data.instructions;
+                   killerName = data.killer;
+                }
+            }).catch(e => console.error("Story generation fail", e));
 
             // Synchronously authorize all cutscene audios explicitly inside a user gesture
             cutsceneAudioElements.forEach(aud => {
@@ -830,6 +848,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 globalBottomBar.classList.add('visible');
                 startGameTimer();
 
+                // Initialize persistent AssemblyAI STT session for the whole game
+                initPersistentSTT();
+
                 currentGameMusicBaseMultiplier = MUSIC_VOL_NORMAL;
                 updateVolumes();
                 fadeInAudio(gameMusic, 2000, targetMusicVol * MUSIC_VOL_NORMAL);
@@ -920,6 +941,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Prepare Interrogation UI
             const interBg = document.getElementById('interrogation-bg');
             interBg.style.backgroundImage = `url('assets/images/${suspect.pic}')`;
+
+            const suspectNameEl = document.getElementById('interrogation-suspect-name');
+            if (suspectNameEl) {
+                suspectNameEl.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#bfa168"/></svg> ${suspect.name.toUpperCase()} - ${suspect.role.toUpperCase()}`;
+            }
             
             // Add zoom animation class
             interBg.classList.remove('interrogation-anim-zoom');
@@ -1012,26 +1038,293 @@ document.addEventListener('DOMContentLoaded', () => {
     verdictSubmitBtn.addEventListener('click', () => {
         if (!selectedVerdictId) return;
         if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
-        console.log("FINAL VERDICT SUBMITTED: ", selectedVerdictId);
-        // Can transition to ending sequence here based on selected verdict
+        
+        showGameResult(selectedVerdictId);
+    });
+
+    function showGameResult(selectedId) {
+        // Find the actual killer's suspect object
+        const killerSuspect = suspectsData.find(s => s.name === killerName);
+        const killerId = killerSuspect ? killerSuspect.id : "";
+        
+        const isCorrect = (selectedId === killerId);
+        
+        const resultOverlay = document.getElementById('result-overlay');
+        const resultTitle = document.getElementById('result-title');
+        const killerNameDisplay = document.getElementById('killer-name-display');
+        const killerPortrait = document.getElementById('killer-portrait');
+        const finalTime = document.getElementById('final-time');
+        const finalInterrogations = document.getElementById('final-interrogations');
+        
+        if (isCorrect) {
+            resultTitle.textContent = "CASE SOLVED";
+            resultTitle.style.textShadow = "0 0 20px #5cb85c";
+            resultTitle.style.color = "#d1f2d1";
+        } else {
+            resultTitle.textContent = "CASE COLD";
+            resultTitle.style.textShadow = "0 0 20px #ff3333";
+            resultTitle.style.color = "#ffaaaa";
+        }
+        
+        killerNameDisplay.textContent = killerName.toUpperCase();
+        if (killerSuspect) {
+            killerPortrait.style.backgroundImage = `url('assets/headshots/${killerSuspect.headshot}')`;
+        }
+        
+        finalTime.textContent = formatTime(gameTimeSeconds);
+        finalInterrogations.textContent = questionsUsed;
+        
+        // Final transition
+        blackOverlay.classList.remove('fade-out');
+        blackOverlay.classList.add('fade-in');
+        
+        setTimeout(() => {
+            // Hide all game elements
+            document.getElementById('interrogation-screen').classList.add('hidden');
+            document.getElementById('suspects-screen').classList.add('hidden');
+            document.getElementById('global-bottom-bar').classList.add('hidden');
+            document.getElementById('verdict-popup-overlay').classList.add('hidden');
+            document.getElementById('open-journal-btn').classList.add('hidden');
+            document.getElementById('in-game-settings-btn').classList.add('hidden');
+            
+            resultOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                resultOverlay.classList.add('visible');
+                blackOverlay.classList.remove('fade-in');
+                blackOverlay.classList.add('fade-out');
+                
+                // Stop timer
+                if (gameTimerInterval) {
+                   clearInterval(gameTimerInterval);
+                   gameTimerInterval = null;
+                }
+            }, 50);
+        }, 1500);
+    }
+
+    document.getElementById('play-again-btn').addEventListener('click', () => {
+        window.location.reload();
+    });
+    
+    document.getElementById('result-quit-btn').addEventListener('click', () => {
+        window.location.reload(); // Quitting in browser context usually just means returning to start
     });
 
     let isRecording = false;
-    let socket = null;
+    let backendSocket = null;
     let audioContext = null;
     let scriptProcessor = null;
+    let sttReady = false;
 
-    // Mic button click inside interrogation
+    // Tear down audio capture cleanly (does NOT close the WS session)
+    function stopAudioCapture() {
+        if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
+        if (audioContext && audioContext.state !== 'closed') { audioContext.close(); audioContext = null; }
+    }
+
+    // --- Persistent STT Session ---
+    // Opens WebSocket + AssemblyAI session ONCE at game start.
+    // Audio capture is started/stopped per mic click — NO continuous background audio.
+    function initPersistentSTT() {
+        const apiKey = localStorage.getItem('assembly-key-validated');
+        if (!apiKey) {
+            console.warn('[STT] No Assembly AI key found, skipping STT init.');
+            return;
+        }
+
+        backendSocket = new WebSocket('ws://localhost:3000');
+
+        backendSocket.onopen = () => {
+            console.log('[STT] WebSocket connected, initializing AssemblyAI session...');
+            backendSocket.send(JSON.stringify({ type: 'stt_init', apiKey }));
+        };
+
+        backendSocket.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.type === 'stt_ready') {
+                sttReady = true;
+                console.log('[STT] AssemblyAI session ready');
+
+            } else if (msg.type === 'stt_partial') {
+                if (isRecording) {
+                    const indicator = document.querySelector('.transcript-indicator');
+                    indicator.textContent = 'Analyzing speech patterns...';
+                }
+
+            } else if (msg.type === 'stt_final') {
+                if (isRecording) {
+                    isRecording = false;
+                    document.getElementById('mic-btn').classList.remove('recording');
+                    // Stop audio capture BEFORE handing off — clean slate for next question
+                    stopAudioCapture();
+                    handleFinalTranscript(msg.text);
+                }
+
+            } else if (msg.type === 'stt_error') {
+                showErrorPopup("AssemblyAI error: " + msg.message);
+                isRecording = false;
+                document.getElementById('mic-btn').classList.remove('recording');
+                stopAudioCapture();
+            }
+        };
+
+        backendSocket.onerror = () => {
+            console.error('[STT] WebSocket connection error');
+            sttReady = false;
+        };
+
+        backendSocket.onclose = () => {
+            console.log('[STT] WebSocket closed');
+            sttReady = false;
+        };
+    }
+
+    // Start fresh audio capture and begin streaming to backend
+    async function startAudioCapture() {
+        if (!globalMicStream) {
+            globalMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        const source = audioContext.createMediaStreamSource(globalMicStream);
+        scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+        source.connect(scriptProcessor);
+        scriptProcessor.connect(audioContext.destination);
+
+        scriptProcessor.onaudioprocess = (e) => {
+            if (!isRecording || !backendSocket || backendSocket.readyState !== WebSocket.OPEN) return;
+            const inputData = e.inputBuffer.getChannelData(0);
+            const pcm16 = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+                const s = Math.max(-1, Math.min(1, inputData[i]));
+                pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            backendSocket.send(pcm16.buffer);
+        };
+    }
+
+    // --- Handle completed speech transcript ---
+    function handleFinalTranscript(text) {
+        const transcriptOverlay = document.getElementById('transcript-overlay');
+        const transcriptBox = document.getElementById('transcript-box');
+        const transcriptText = document.getElementById('transcript-text');
+        const indicator = document.querySelector('.transcript-indicator');
+
+        // Clean up the text
+        const questionStr = text.trim();
+
+        indicator.style.display = 'none';
+
+        if (!questionStr) {
+            transcriptOverlay.classList.add('fade-out-anim');
+            setTimeout(() => transcriptOverlay.classList.add('hidden'), 1000);
+            return;
+        }
+
+        // 1. Show EXACTLY what was said
+        transcriptText.textContent = questionStr;
+        transcriptBox.classList.remove('blinking-glow');
+        transcriptBox.classList.add('completed-green');
+        incrementQuestionCount();
+
+        document.getElementById('mic-btn').disabled = true;
+        document.getElementById('exit-interrogation-btn').disabled = true;
+
+        // 2. WAIT 1.5 seconds so the user can read their question before it clears
+        setTimeout(() => {
+            const suspectName = suspectsData.find(s => s.id === currentSuspectId).name;
+            const sysPrompt = generatedInstructions[suspectName] || "You are a suspect. Answer in 30 words.";
+            if (!chatHistories[suspectName]) chatHistories[suspectName] = [];
+
+            transcriptBox.classList.remove('completed-green');
+            transcriptBox.classList.add('blinking-glow');
+            transcriptText.style.color = '#ffaa00';
+            transcriptText.textContent = 'Suspect is thinking...';
+
+            const provider = localStorage.getItem('ai-provider') || 'gemini';
+            const aiApiKey = localStorage.getItem('ai-key-validated');
+
+            // Interrogation typewriter (scoped to transcript overlay)
+            function typeResponseText(responseText, i, cb) {
+                if (i < responseText.length) {
+                    transcriptText.textContent += responseText.charAt(i);
+                    setTimeout(() => typeResponseText(responseText, i + 1, cb), 40);
+                } else {
+                    if (cb) cb();
+                }
+            }
+
+            fetch('http://localhost:3000/api/interrogate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider, apiKey: aiApiKey, sysPrompt, history: chatHistories[suspectName], question: questionStr })
+            }).then(r => r.json()).then(resp => {
+            if (resp.answer) {
+                chatHistories[suspectName].push({ role: 'user', content: questionStr });
+                chatHistories[suspectName].push({ role: 'model', content: resp.answer });
+
+                transcriptBox.classList.remove('blinking-glow');
+                transcriptText.style.color = '#ffaa00';
+                transcriptText.textContent = '';
+
+                let audioFinished = false;
+                let typingFinished = false;
+
+                const checkUnlock = () => {
+                    if (audioFinished && typingFinished) {
+                        setTimeout(() => {
+                           transcriptOverlay.classList.add('fade-out-anim');
+                           setTimeout(() => {
+                               transcriptOverlay.classList.add('hidden');
+                               transcriptText.style.color = '';
+                               document.getElementById('mic-btn').disabled = false;
+                               document.getElementById('exit-interrogation-btn').disabled = false;
+                           }, 1000);
+                        }, 1000);
+                    }
+                };
+
+                const murfKey = localStorage.getItem('murf-key-validated');
+                if (murfKey) {
+                    const ttsUrl = `http://localhost:3000/api/tts?text=${encodeURIComponent(resp.answer)}&murfKey=${encodeURIComponent(murfKey)}&character=${encodeURIComponent(suspectName)}`;
+                    let aud = new Audio(ttsUrl);
+                    aud.onended = () => { audioFinished = true; checkUnlock(); };
+                    aud.onerror = () => { audioFinished = true; checkUnlock(); };
+                    aud.play().catch(() => { audioFinished = true; checkUnlock(); });
+                } else {
+                    audioFinished = true;
+                }
+
+                setTimeout(() => {
+                    typeResponseText(resp.answer, 0, () => { typingFinished = true; checkUnlock(); });
+                }, 1000);
+            }
+        }).catch(e => {
+            console.error("Interrogation API error", e);
+            transcriptText.textContent = 'Communication failed.';
+            document.getElementById('mic-btn').disabled = false;
+            document.getElementById('exit-interrogation-btn').disabled = false;
+            setTimeout(() => {
+                transcriptOverlay.classList.add('fade-out-anim');
+                setTimeout(() => transcriptOverlay.classList.add('hidden'), 1000);
+            }, 2000);
+        });
+        }, 1500);
+    }
+
+    // --- Mic button click (simplified — just toggles recording) ---
     document.getElementById('mic-btn').addEventListener('click', async () => {
         if (!currentSuspectId) return;
         
         const suspect = suspectsData.find(s => s.id === currentSuspectId);
         if (!suspect) return;
 
-        if (isRecording) {
-            // Handled by pause logic
-            return; 
+        if (Object.keys(generatedInstructions).length === 0) {
+            showErrorPopup("The story and secrets are still being randomly generated by the AI. Please wait a few seconds and try again.");
+            return;
         }
+
+        if (isRecording) return;
 
         // Check if questions are exhausted
         if (questionsUsed >= questionsTotal) {
@@ -1039,7 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Dynamic limit before everyone else is interrogated: 4 for HARD, else 5
+        // Dynamic limit before everyone else is interrogated
         const maxConsecutiveQuestions = (selectedDifficulty === 'HARD') ? 4 : 5;
         if (suspect.interrogations >= maxConsecutiveQuestions) {
             const everyoneElseQuestioned = suspectsData.filter(s => s.id !== currentSuspectId).every(s => s.interrogations >= 1);
@@ -1049,12 +1342,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const apiKey = localStorage.getItem('assembly-key-validated');
-        if (!apiKey) {
-            showErrorPopup("Assembly AI API key is missing. Please configure it in Settings.");
+        // Check if STT session is ready
+        if (!sttReady || !backendSocket || backendSocket.readyState !== WebSocket.OPEN) {
+            showErrorPopup("Speech recognition is not ready yet. Please wait a moment and try again.");
             return;
         }
 
+        // Show transcript overlay
         const transcriptOverlay = document.getElementById('transcript-overlay');
         const transcriptBox = document.getElementById('transcript-box');
         const transcriptText = document.getElementById('transcript-text');
@@ -1066,128 +1360,22 @@ document.addEventListener('DOMContentLoaded', () => {
         transcriptBox.classList.add('blinking-glow');
         transcriptText.textContent = '';
         indicator.style.display = 'block';
-        indicator.textContent = 'Connecting to Universal-3 Pro...';
+        indicator.textContent = 'Listening... (speak now)';
 
         isRecording = true;
         document.getElementById('mic-btn').classList.add('recording');
 
-        let pauseTimer;
-        let currentRecognizedText = "";
-
-        const finishSession = () => {
-            if (!isRecording) return;
+        // Tell backend to start accepting audio, then start fresh audio capture
+        backendSocket.send(JSON.stringify({ type: 'stt_start' }));
+        startAudioCapture().catch(err => {
+            showErrorPopup("Microphone error: " + err.message);
             isRecording = false;
             document.getElementById('mic-btn').classList.remove('recording');
-            
-            if (socket) socket.close();
-            if (scriptProcessor) scriptProcessor.disconnect();
-            if (audioContext && audioContext.state !== 'closed') audioContext.close();
-            
-            clearTimeout(pauseTimer);
-            indicator.style.display = 'none';
-
-            if (!transcriptText.textContent.trim()) {
-                // Nothing recorded/typed
-                transcriptOverlay.classList.add('fade-out-anim');
-                setTimeout(() => transcriptOverlay.classList.add('hidden'), 1000);
-                return;
-            }
-
-            // Finish nicely
-            transcriptBox.classList.remove('blinking-glow');
-            transcriptBox.classList.add('completed-green');
-            incrementQuestionCount();
-
-            setTimeout(() => {
-                transcriptOverlay.classList.add('fade-out-anim');
-                setTimeout(() => {
-                    transcriptOverlay.classList.add('hidden');
-                }, 1000);
-            }, 1000);
-        };
-
-        const resetPauseTimer = () => {
-            clearTimeout(pauseTimer);
-            transcriptBox.classList.remove('blinking-glow');
-            pauseTimer = setTimeout(() => {
-                finishSession();
-            }, 3500); // 3.5s pause required to ensure network latency doesn't clip the sentence
-        };
-
-        try {
-            // Using token query parameter assuming standard websocket bypassing of impossible HTTP Authorization headers
-            const API_ENDPOINT = `wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&speech_model=u3-rt-pro&token=${apiKey}`;
-            socket = new WebSocket(API_ENDPOINT);
-
-            socket.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    const msgType = data.type;
-
-                    if (msgType === "Begin") {
-                        indicator.textContent = 'Listening (Speak now)...';
-                    } else if (msgType === "Turn") {
-                        const transcript = data.transcript || "";
-                        if (transcript) {
-                            // Flushes prior utterance chunks replacing them completely instead of appending natively.
-                            currentRecognizedText = transcript;
-                            transcriptText.textContent = currentRecognizedText;
-                            resetPauseTimer();
-
-                            if (currentRecognizedText.trim().split(/\s+/).length > 30) {
-                                transcriptText.textContent = currentRecognizedText.trim().split(/\s+/).slice(0, 30).join(' ');
-                                finishSession();
-                            }
-                        }
-                    } else if (msgType === "Termination") {
-                        finishSession();
-                    }
-                } catch (e) {
-                    console.error("AssemblyAI Parsing Error:", e);
-                }
-            };
-
-            socket.onopen = async () => {
-                indicator.textContent = 'Speak now...';
-                if (!globalMicStream) {
-                    globalMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                }
-                
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                let source = audioContext.createMediaStreamSource(globalMicStream);
-                scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-                
-                source.connect(scriptProcessor);
-                scriptProcessor.connect(audioContext.destination);
-                
-                scriptProcessor.onaudioprocess = (e) => {
-                    if (!isRecording || socket.readyState !== WebSocket.OPEN) return;
-                    let inputData = e.inputBuffer.getChannelData(0);
-                    let pcm16 = new Int16Array(inputData.length);
-                    for (let i = 0; i < inputData.length; i++) {
-                        let s = Math.max(-1, Math.min(1, inputData[i]));
-                        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                    }
-                    socket.send(pcm16.buffer); // Binary payload mandated by V3 Engine
-                };
-
-                transcriptBox.classList.add('blinking-glow');
-                pauseTimer = setTimeout(() => {
-                    finishSession(); 
-                }, 5000);
-            };
-
-            socket.onerror = (e) => {
-                showErrorPopup("AssemblyAI Universal-3 Connection Error.");
-                finishSession();
-            };
-
-        } catch (err) {
-            showErrorPopup("Microphone system or Connection error.");
-            isRecording = false;
-            document.getElementById('mic-btn').classList.remove('recording');
-        }
+        });
     });
+
+
+
 
     function incrementQuestionCount() {
         if (!currentSuspectId) return;

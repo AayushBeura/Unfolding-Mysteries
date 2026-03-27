@@ -1588,3 +1588,96 @@ body, html {
     border-color: #aa3333 !important;
     color: #aa3333 !important;
 }
+
+/* Game Result Overlay */
+#result-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    background: rgba(0,0,0,0.98);
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    pointer-events: none;
+}
+
+#result-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.result-box {
+    background: rgba(20, 10, 5, 0.9);
+    border: 3px solid #8e6d3c;
+    padding: 50px 70px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(0,0,0,1), inset 0 0 30px rgba(142, 109, 60, 0.2);
+    max-width: 600px;
+    width: 90%;
+}
+
+#result-title {
+    font-size: 3.5rem;
+    color: #e5cd96;
+    margin: 0 0 30px 0;
+    font-family: 'Cinzel Decorative', serif;
+    text-shadow: 0 0 20px #ffaa00;
+}
+
+.result-killer-reveal {
+    margin-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.killer-reveal-portrait {
+    width: 150px;
+    height: 150px;
+    border: 3px solid #ffd700;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    margin-bottom: 15px;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+    filter: sepia(0.3);
+}
+
+#killer-name-display {
+    font-size: 2rem;
+    color: #ffd700;
+    font-family: 'Cinzel', serif;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
+
+.result-stats {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #5a4224;
+    padding: 20px;
+    margin-bottom: 40px;
+    border-radius: 4px;
+}
+
+.result-stats p {
+    font-family: 'Cinzel', serif;
+    font-size: 1.2rem;
+    color: #bfa168;
+    margin: 10px 0;
+}
+
+.result-stats span {
+    color: #e5cd96;
+    font-weight: bold;
+}
+
+.result-actions {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+}
+
