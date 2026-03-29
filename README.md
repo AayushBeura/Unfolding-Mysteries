@@ -18,26 +18,27 @@ By leveraging Falcon, **Unfolding Mysteries** achieves near-instant voice respon
 The game's "brain" is a sophisticated orchestration of several state-of-the-art AI technologies:
 
 ### **1. Voice & Audio (The Senses)**
-*   **TTS (Text-to-Speech):** [Murf AI Falcon](https://murf.ai/) - Used for high-speed, emotive character dialogue.
-*   **STT (Speech-to-Text):** [AssemblyAI Universal-3 Pro](https://www.assemblyai.com/) - Real-time, ultra-accurate transcription of user voice input via a persistent WebSocket proxy.
+*   **TTS (Text-to-Speech):** [Murf AI Falcon](https://murf.ai/) — Cinematic narration & high-speed, emotive character voice synthesis.
+*   **STT (Speech-to-Text):** [AssemblyAI Universal-3 Pro](https://www.assemblyai.com/) — Real-time speech recognition & transcript handling via a persistent WebSocket proxy.
 
-### **2. Logic & Generation (The Mind)**
-*   **Story Orchestration:** [Google Gemini 2.0 Flash](https://ai.google.dev/) - Generates the randomized case files, secret backstories, and system instructions for all suspects.
-*   **Interrogation Engine:** [Cerebras (Llama 3.3 70B)](https://cerebras.ai/) - Provides ultra-fast inference for character responses, ensuring the suspects stay in character while reacting to your specific questions.
+### **2. Logic & Narrative (The Mind)**
+*   **Interrogation Engine:** [Cerebras API](https://cerebras.ai/) — Ultra-fast inference for interactive reasoning & narrative logic. Suspects stay fully in character while reacting to your specific questions.
 
 ### **3. Frontend & Backend (The Body)**
-*   **Frontend:** Pure HTML5, Vanilla JavaScript, and Advanced CSS3 (Glassmorphism, Dynamic Blurs, and 1880s aesthetic).
-*   **Backend:** Node.js with Express and WebSocket Server.
+*   **Frontend:** HTML, CSS, JavaScript — Full interface & interaction system with a custom browser-based scene sequencing system.
+*   **Backend:** Node.js + Express.js — Backend logic & API orchestration.
 
 ---
 
 ## 🕵️ Gameplay Features
 
-*   **Voice-Activated Interrogations**: Speak directly to the suspects. No typing, just investigation.
-*   **Investigator's Journal**: Document your findings in a persistent, flippable book.
-*   **Dynamic Storytelling**: Each game session generates a unique "Locked Room" mystery. No two cases are identical.
-*   **Atmospheric Immersion**: Period-accurate visuals combined with a layered soundscape (rain, thunder, and ambient period music).
-*   **Difficulty Scaling**: Choose between Easy, Medium, and Hard. At higher levels, every suspect hides secrets, and the killer lies with chilling precision.
+*   **Voice-Activated Interrogations** — Speak directly to suspects using your microphone. No typing, just investigation.
+*   **Investigator's Journal** — Document your findings in a persistent, flippable in-game notebook.
+*   **Dynamic Storytelling** — Each session generates a unique locked-room mystery. The killer, motive, and clues change every playthrough.
+*   **Atmospheric Immersion** — Period-accurate visuals paired with a layered soundscape: rain, thunder, and ambient period music.
+*   **Difficulty Scaling** — Easy, Medium, and Hard modes. At higher difficulties, suspects actively mislead you with partial truths and outright lies.
+*   **Full-Screen Cinematic Experience** — Designed to be played in fullscreen with headphones for maximum immersion. 🎧
+*   **Final Verdict System** — Once you've interrogated all suspects, lock in your accusation. The game then reveals the truth.
 
 ---
 
@@ -46,7 +47,7 @@ The game's "brain" is a sophisticated orchestration of several state-of-the-art 
 To run the game, you will need your own API keys for:
 1.  **Murf AI** (Falcon access required)
 2.  **AssemblyAI**
-3.  **Google AI (Gemini)** or **Cerebras**
+3.  **Cerebras**
 
 Pass these keys into the **Settings** menu within the game to authorize the AI engines.
 
