@@ -518,6 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let generatedInstructions = {};
     let chatHistories = {};
     let killerName = "";
+    let storyTruthText = "";
     
     diffBtns.forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -529,16 +530,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Fire async generate story request in background
-            const provider = localStorage.getItem('ai-provider') || 'gemini';
             const apiKey = localStorage.getItem('ai-key-validated');
             fetch('http://localhost:3000/api/generate-story', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ provider, apiKey, difficulty: selectedDifficulty })
+                body: JSON.stringify({ apiKey, difficulty: selectedDifficulty })
             }).then(res => res.json()).then(data => {
                 if(data.instructions) {
                    generatedInstructions = data.instructions;
                    killerName = data.killer;
+                   storyTruthText = data.story;
                 }
             }).catch(e => console.error("Story generation fail", e));
 
@@ -556,6 +557,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             triggerStart(); // Boot the overarching 10+ second delayed transition
+            
+            // Start STT session early as requested
+            initPersistentSTT();
         });
     });
 
@@ -606,7 +610,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('settings-home-btn').addEventListener('click', () => { window.location.reload(); });
 
     // API Key Validation Logic
-    const aiProviderSelect = document.getElementById('ai-provider-select');
     const aiKeyInput = document.getElementById('ai-key');
     const murfKeyInput = document.getElementById('murf-key');
     const assemblyKeyInput = document.getElementById('assembly-key');
@@ -614,9 +617,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const validateMurfKeyBtn = document.getElementById('validate-murf-key');
     const validateAssemblyKeyBtn = document.getElementById('validate-assembly-key');
 
-    if (localStorage.getItem('ai-provider')) {
-        aiProviderSelect.value = localStorage.getItem('ai-provider');
-    }
     if (localStorage.getItem('ai-key-validated')) {
         aiKeyInput.value = localStorage.getItem('ai-key-validated');
         validateAiKeyBtn.textContent = 'VALID';
@@ -636,20 +636,10 @@ document.addEventListener('DOMContentLoaded', () => {
         validateAssemblyKeyBtn.style.borderColor = '#5cb85c';
     }
 
-    aiProviderSelect.addEventListener('change', () => {
-        localStorage.setItem('ai-provider', aiProviderSelect.value);
-        localStorage.removeItem('ai-key-validated');
-        aiKeyInput.value = '';
-        validateAiKeyBtn.textContent = 'VALIDATE';
-        validateAiKeyBtn.style.color = '';
-        validateAiKeyBtn.style.borderColor = '';
-    });
-
     validateAiKeyBtn.addEventListener('click', () => {
         const val = aiKeyInput.value.trim();
         if (val.length > 5) { // Simple validation
             localStorage.setItem('ai-key-validated', val);
-            localStorage.setItem('ai-provider', aiProviderSelect.value);
             validateAiKeyBtn.textContent = 'VALID';
             validateAiKeyBtn.style.color = '#5cb85c';
             validateAiKeyBtn.style.borderColor = '#5cb85c';
@@ -847,9 +837,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 suspectsScreen.classList.add('visible');
                 globalBottomBar.classList.add('visible');
                 startGameTimer();
-
-                // Initialize persistent AssemblyAI STT session for the whole game
-                initPersistentSTT();
 
                 currentGameMusicBaseMultiplier = MUSIC_VOL_NORMAL;
                 updateVolumes();
@@ -1110,6 +1097,41 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload(); // Quitting in browser context usually just means returning to start
     });
 
+    document.getElementById('reveal-truth-btn').addEventListener('click', () => {
+        if (!storyTruthText) return;
+        const btn = document.getElementById('reveal-truth-btn');
+        const box = document.querySelector('.result-box');
+        const murfKey = localStorage.getItem('murf-key-validated');
+
+        if (!murfKey) {
+            showErrorPopup("Murf API key is required for truth narration.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "NARRATING TRUTH...";
+        box.style.filter = "brightness(0.6)";
+
+        const cleanTruthText = storyTruthText.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+        const ttsUrl = `http://localhost:3000/api/tts?text=${encodeURIComponent(cleanTruthText)}&murfKey=${encodeURIComponent(murfKey)}&character=THE_TRUTH`;
+        let aud = new Audio(ttsUrl);
+        aud.onended = () => {
+            btn.disabled = false;
+            btn.textContent = "REVEAL FULL TRUTH";
+            box.style.filter = "none";
+        };
+        aud.onerror = () => {
+            btn.disabled = false;
+            btn.textContent = "REVEAL FULL TRUTH";
+            box.style.filter = "none";
+        };
+        aud.play().catch(() => {
+            btn.disabled = false;
+            btn.textContent = "REVEAL FULL TRUTH";
+            box.style.filter = "none";
+        });
+    });
+
     let isRecording = false;
     let backendSocket = null;
     let audioContext = null;
@@ -1126,6 +1148,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Opens WebSocket + AssemblyAI session ONCE at game start.
     // Audio capture is started/stopped per mic click — NO continuous background audio.
     function initPersistentSTT() {
+        if (backendSocket && (backendSocket.readyState === WebSocket.OPEN || backendSocket.readyState === WebSocket.CONNECTING)) {
+            console.log('[STT] Session already initializing or connected. Skipping.');
+            return;
+        }
+
         const apiKey = localStorage.getItem('assembly-key-validated');
         if (!apiKey) {
             console.warn('[STT] No Assembly AI key found, skipping STT init.');
@@ -1241,7 +1268,6 @@ document.addEventListener('DOMContentLoaded', () => {
             transcriptText.style.color = '#ffaa00';
             transcriptText.textContent = 'Suspect is thinking...';
 
-            const provider = localStorage.getItem('ai-provider') || 'gemini';
             const aiApiKey = localStorage.getItem('ai-key-validated');
 
             // Interrogation typewriter (scoped to transcript overlay)
@@ -1257,7 +1283,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch('http://localhost:3000/api/interrogate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ provider, apiKey: aiApiKey, sysPrompt, history: chatHistories[suspectName], question: questionStr })
+                body: JSON.stringify({ apiKey: aiApiKey, sysPrompt, history: chatHistories[suspectName], question: questionStr })
             }).then(r => r.json()).then(resp => {
             if (resp.answer) {
                 chatHistories[suspectName].push({ role: 'user', content: questionStr });
@@ -1286,7 +1312,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const murfKey = localStorage.getItem('murf-key-validated');
                 if (murfKey) {
-                    const ttsUrl = `http://localhost:3000/api/tts?text=${encodeURIComponent(resp.answer)}&murfKey=${encodeURIComponent(murfKey)}&character=${encodeURIComponent(suspectName)}`;
+                    // Clean text for Murf to avoid unexpected model pauses/hangs
+                    const cleanMurfText = resp.answer.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+                    const ttsUrl = `http://localhost:3000/api/tts?text=${encodeURIComponent(cleanMurfText)}&murfKey=${encodeURIComponent(murfKey)}&character=${encodeURIComponent(suspectName)}`;
                     let aud = new Audio(ttsUrl);
                     aud.onended = () => { audioFinished = true; checkUnlock(); };
                     aud.onerror = () => { audioFinished = true; checkUnlock(); };

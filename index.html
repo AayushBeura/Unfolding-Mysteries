@@ -117,13 +117,9 @@
                 <div id="developer-options">
                     <h3 class="dev-title">DEVELOPER OPTIONS</h3>
                     <div class="setting-group" style="flex-direction: column; align-items: flex-start; gap: 5px;">
-                        <label>AI PROVIDER API KEY</label>
-                        <select id="ai-provider-select" class="styled-input" style="width: 100%; margin-bottom: 5px; background: rgba(0,0,0,0.5); color: #ffebd6; border: 1px solid #bfa168;">
-                            <option value="gemini">Gemini</option>
-                            <option value="cerebras">Cerebras</option>
-                        </select>
+                        <label>CEREBRAS API KEY</label>
                         <div style="display: flex; width: 100%; gap: 10px;">
-                            <input type="password" class="styled-input" id="ai-key" placeholder="Enter API key..." style="flex: 1;">
+                            <input type="password" class="styled-input" id="ai-key" placeholder="Enter Cerebras key..." style="flex: 1;">
                             <button id="validate-ai-key" class="back-btn" style="margin-top: 0; padding: 5px 15px;">VALIDATE</button>
                         </div>
                     </div>
@@ -311,6 +307,7 @@
                     <p>TIME ELAPSED: <span id="final-time"></span></p>
                     <p>INTERROGATIONS: <span id="final-interrogations"></span></p>
                 </div>
+                <button id="reveal-truth-btn" class="back-btn" style="color: #ffd700; border-color: #ffd700; width: 80%; margin: 0 auto 20px auto; font-size: 1rem; padding: 8px 15px;">REVEAL FULL TRUTH</button>
                 <div class="result-actions">
                     <button class="back-btn" id="play-again-btn">PLAY AGAIN</button>
                     <button class="back-btn" id="result-quit-btn" style="color: #ff3333; border-color: #ff3333;">QUIT</button>

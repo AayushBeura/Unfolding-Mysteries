@@ -4,7 +4,6 @@ const axios = require('axios');
 const http = require('http');
 const { WebSocketServer } = require('ws');
 const { AssemblyAI } = require('assemblyai');
-const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 app.use(cors());
@@ -21,7 +20,7 @@ const suspectsList = [
 
 app.post('/api/generate-story', async (req, res) => {
     try {
-        const { provider, apiKey, difficulty } = req.body;
+        const { apiKey, difficulty } = req.body;
         
         // Randomly pick the killer
         const killer = suspectsList[Math.floor(Math.random() * suspectsList.length)];
@@ -66,7 +65,7 @@ app.post('/api/generate-story', async (req, res) => {
         3. What each suspect was doing during the time of the murder (their alibis, true or false).
         4. Relationships, dark secrets, and conflicts that each suspect had with Arthur.
         5. Provide a 'system instruction prompt' for each suspect. You must instruct them to act out their specific role and personality. They must know the story you created, but act evasive or helpful according to the difficulty and whether they are the killer. The true killer will lie about their alibi. They must be instructed to answer strictly in NO MORE THAN 30-40 words, keeping their character. All clues must eventually help the investigator deduce that ${killer} is the murderer. Only one murderer.
-        
+
         CRITICAL RULE FOR ALL CHARACTER PROMPTS: 
         - Instruct every character to speak entirely in plain dialogue only. Absolutely NO non-verbal roleplay actions. Do NOT use asterisks, brackets, or parentheses. 
         - Instruct characters NEVER to mention or refer to anyone outside the 5 suspects and the victim. 
@@ -103,28 +102,16 @@ app.post('/api/generate-story', async (req, res) => {
             throw new Error("No JSON found in response");
         };
 
-        if (provider === 'gemini') {
-            const ai = new GoogleGenAI({ apiKey: apiKey });
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.0-flash',
-                contents: prompt,
-                config: {
-                    responseMimeType: "application/json"
-                }
-            });
-            storyData = extractJSON(response.text);
-        } else if (provider === 'cerebras') {
-            const response = await axios.post('https://api.cerebras.ai/v1/chat/completions', {
-                model: 'qwen-3-235b-a22b-instruct-2507',
-                messages: [{ role: 'system', content: 'You must output only valid JSON.' }, { role: 'user', content: prompt }],
-                temperature: 0.7,
-                response_format: { type: "json_object" }
-            }, {
-                headers: { 'Authorization': `Bearer ${apiKey}` }
-            });
-            const text = response.data.choices[0].message.content;
-            storyData = extractJSON(text);
-        }
+        const response = await axios.post('https://api.cerebras.ai/v1/chat/completions', {
+            model: 'qwen-3-235b-a22b-instruct-2507',
+            messages: [{ role: 'system', content: 'You must output only valid JSON.' }, { role: 'user', content: prompt }],
+            temperature: 0.7,
+            response_format: { type: "json_object" }
+        }, {
+            headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+        const text = response.data.choices[0].message.content;
+        storyData = extractJSON(text);
 
         res.json({ killer, ...storyData });
 
@@ -136,56 +123,28 @@ app.post('/api/generate-story', async (req, res) => {
 
 app.post('/api/interrogate', async (req, res) => {
     try {
-        const { provider, apiKey, sysPrompt, history, question } = req.body;
+        const { apiKey, sysPrompt, history, question } = req.body;
         
-        if (provider === 'gemini') {
-            const ai = new GoogleGenAI({ apiKey: apiKey });
-            const contents = history.map(h => ({
-                role: h.role, // 'user' or 'model'
-                parts: [{ text: h.content }]
-            }));
-            contents.push({ role: 'user', parts: [{ text: question }] });
-            
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.0-flash',
-                contents: contents,
-                config: {
-                    systemInstruction: sysPrompt + ' Respond ONLY in plain spoken dialogue. No asterisks, parentheses, brackets, or stage directions. 30-40 words max. You must ONLY refer to the 5 suspects and the victim; absolutely no external people or entities. Refer to others by their role (Mistress/Widow, Maid, Butler, Guest) or name (Edward, Hartwell, etc.).'
-                }
-            });
-            
-            const raw = response.text;
-            const cleanAnswer = raw
-                .replace(/\*[^*]+\*/g, '')      // remove *action*
-                .replace(/\[[^\]]+\]/g, '')     // remove [action]
-                .replace(/\([^)]+\)/g, '')      // remove (action)
-                .replace(/[\u2014\u2013]/g, ',') // replace em/en dashes with comma
-                .replace(/\.{2,}/g, '.')         // collapse multiple dots
-                .replace(/\s{2,}/g, ' ')         // collapse extra spaces
-                .trim();
-            res.json({ answer: cleanAnswer });
-        } else if (provider === 'cerebras') {
-            const messages = [{ role: 'system', content: sysPrompt + ' Respond ONLY in plain spoken dialogue. No asterisks, parentheses, brackets, or stage directions. 30-40 words max. You must ONLY refer to the 5 suspects and the victim; absolutely no external people or entities. Refer to others by their role (Mistress/Widow, Maid, Butler, Guest) or name (Edward, Hartwell, etc.).' }];
-            history.forEach(h => messages.push({ role: h.role === 'model' ? 'assistant' : 'user', content: h.content }));
-            messages.push({ role: 'user', content: question });
+        const messages = [{ role: 'system', content: sysPrompt + ' Respond ONLY in plain spoken dialogue. No asterisks, parentheses, brackets, or stage directions. 30-40 words max. You must ONLY refer to the 5 suspects and the victim; absolutely no external people or entities. Refer to others by their role (Mistress/Widow, Maid, Butler, Guest) or name (Edward, Hartwell, etc.).' }];
+        history.forEach(h => messages.push({ role: h.role === 'model' ? 'assistant' : 'user', content: h.content }));
+        messages.push({ role: 'user', content: question });
 
-            const response = await axios.post('https://api.cerebras.ai/v1/chat/completions', {
-                model: 'llama3.1-8b',
-                messages: messages,
-            }, {
-                headers: { 'Authorization': `Bearer ${apiKey}` }
-            });
-            const raw2 = response.data.choices[0].message.content;
-            const cleanAnswer2 = raw2
-                .replace(/\*[^*]+\*/g, '')
-                .replace(/\[[^\]]+\]/g, '')
-                .replace(/\([^)]+\)/g, '')
-                .replace(/[\u2014\u2013]/g, ',')
-                .replace(/\.{2,}/g, '.')
-                .replace(/\s{2,}/g, ' ')
-                .trim();
-            res.json({ answer: cleanAnswer2 });
-        }
+        const response = await axios.post('https://api.cerebras.ai/v1/chat/completions', {
+            model: 'qwen-3-235b-a22b-instruct-2507',
+            messages: messages,
+        }, {
+            headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+        const raw2 = response.data.choices[0].message.content;
+        const cleanAnswer2 = raw2
+            .replace(/\*[^*]+\*/g, '')
+            .replace(/\[[^\]]+\]/g, '')
+            .replace(/\([^)]+\)/g, '')
+            .replace(/[\u2014\u2013]/g, ',')
+            .replace(/\.{2,}/g, '.')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+        res.json({ answer: cleanAnswer2 });
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: e.message });
@@ -225,6 +184,13 @@ const characterVoiceMap = {
         voiceId: "en-UK-rory",
         style: "Conversational",
         locale: "en-SCOTT",
+        pitch: -14,
+        rate: 7
+    },
+    "THE_TRUTH": {
+        voiceId: "en-UK-freddie",
+        style: "Narrative",
+        locale: "en-UK",
         pitch: -14,
         rate: 7
     }
@@ -269,9 +235,11 @@ app.get('/api/tts', async (req, res) => {
         const murfResponse = await axios(config);
         
         res.setHeader('Content-Type', 'audio/mpeg');
-        res.setHeader('Transfer-Encoding', 'chunked');
-
+        // Let Express handle Transfer-Encoding naturally for a stream
         murfResponse.data.pipe(res);
+        
+        murfResponse.data.on('end', () => res.end());
+        murfResponse.data.on('error', () => res.status(500).end());
         
     } catch(err) {
         console.error("Murf TTS Error:", err.message);
@@ -292,17 +260,18 @@ wss.on('connection', (ws) => {
     let listening = false; // Only forward audio to AssemblyAI when actively listening
 
     ws.on('message', async (message, isBinary) => {
-        // Binary = PCM audio chunk from the browser mic
-        if (isBinary) {
-            if (transcriber && transcriberReady && listening) {
-                transcriber.sendAudio(Buffer.from(message));
-            }
-            return;
-        }
-
-        // Text = JSON control messages
         try {
+            // Binary = PCM audio chunk from the browser mic
+            if (isBinary) {
+                if (transcriber && transcriberReady && listening) {
+                    transcriber.sendAudio(Buffer.from(message));
+                }
+                return;
+            }
+
+            // Text = JSON control messages
             const msg = JSON.parse(message.toString());
+            console.log('[WS] Received Message:', msg.type);
 
             if (msg.type === 'stt_init') {
                 const aaiKey = msg.apiKey;
@@ -312,8 +281,8 @@ wss.on('connection', (ws) => {
                     sampleRate: 16000,
                     speechModel: 'u3-rt-pro',
                     encoding: 'pcm_s16le',
-                    minTurnSilence: 1200,   // Wait 1.2s of silence before considering end-of-turn
-                    maxTurnSilence: 4000,   // Absolute max 4s silence before forcing endpoint
+                    minTurnSilence: 400,   // Wait 1.2s of silence before considering end-of-turn
+                    maxTurnSilence: 1000,   // Absolute max 4s silence before forcing endpoint
                     inactivityTimeout: 900  // 15 minutes — keep session alive for the whole game
                 });
 
@@ -360,7 +329,6 @@ wss.on('connection', (ws) => {
                 console.log('[AssemblyAI] Stopped listening (session stays alive)');
             }
 
-            // Fully close the session
             if (msg.type === 'stt_close') {
                 if (transcriber) {
                     await transcriber.close();
@@ -369,8 +337,8 @@ wss.on('connection', (ws) => {
                     listening = false;
                 }
             }
-        } catch (e) {
-            console.error('[WS] Error:', e.message);
+        } catch (err) {
+            console.error('[WS] Error processing message:', err);
         }
     });
 
