@@ -1,3 +1,7 @@
+* {
+    cursor: url('assets/cursor.png'), auto !important;
+}
+
 body, html {
     margin: 0;
     padding: 0;
