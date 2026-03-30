@@ -53,6 +53,37 @@ Pass these keys into the **Settings** menu within the game to authorize the AI e
 
 ---
 
+## 🚀 Getting Started
+
+The game requires **two servers** running simultaneously — one to serve the frontend, and one to run the Node.js backend.
+
+**1. Install dependencies**
+```bash
+npm install
+```
+
+**2. Start the Node.js backend** (handles AI, TTS, and STT)
+```bash
+node server.js
+```
+The backend will start on `http://localhost:3000`.
+
+**3. Serve the frontend** (in a separate terminal)
+
+Using the VS Code **Live Server** extension, right-click `index.html` → *Open with Live Server*.
+
+Or via `npx`:
+```bash
+npx serve .
+```
+
+**4. Open the game** in your browser, go to **Settings**, enter and validate your API keys, then hit **New Game**.
+
+> ⚠️ Both servers must be running at the same time. The game will not function if the Node.js backend (`server.js`) is not active.
+
+---
+
+
 ## 📜 License
 This project is for educational and experimental purposes, demonstrating the potential of high-speed AI inference in gaming.
 

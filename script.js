@@ -529,6 +529,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Check that the Node.js backend is reachable before launching
+            try {
+                const healthRes = await fetch('http://localhost:3000/api/health', { signal: AbortSignal.timeout(3000) });
+                if (!healthRes.ok) throw new Error('Bad response');
+            } catch {
+                showErrorPopup("Cannot reach the game server.\n\nPlease open a terminal and run:\n  node server.js\n\nThen try again.");
+                return;
+            }
+
             // Fire async generate story request in background
             const apiKey = localStorage.getItem('ai-key-validated');
             fetch('http://localhost:3000/api/generate-story', {
@@ -636,64 +645,113 @@ document.addEventListener('DOMContentLoaded', () => {
         validateAssemblyKeyBtn.style.borderColor = '#5cb85c';
     }
 
-    validateAiKeyBtn.addEventListener('click', () => {
+    function setKeyState(btn, input, state, storageKey, val) {
+        if (state === 'loading') {
+            btn.textContent = 'CHECKING...';
+            btn.style.color = '#e3bc5c';
+            btn.style.borderColor = '#e3bc5c';
+            btn.disabled = true;
+        } else if (state === 'valid') {
+            btn.textContent = 'VALID';
+            btn.style.color = '#5cb85c';
+            btn.style.borderColor = '#5cb85c';
+            btn.disabled = false;
+            localStorage.setItem(storageKey, val);
+            if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
+        } else if (state === 'invalid') {
+            btn.textContent = 'VALIDATE';
+            btn.style.color = '#ff3333';
+            btn.style.borderColor = '#ff3333';
+            btn.disabled = false;
+            localStorage.removeItem(storageKey);
+        } else { // reset
+            btn.textContent = 'VALIDATE';
+            btn.style.color = '';
+            btn.style.borderColor = '';
+            btn.disabled = false;
+            localStorage.removeItem(storageKey);
+        }
+    }
+
+    validateAiKeyBtn.addEventListener('click', async () => {
         const val = aiKeyInput.value.trim();
-        if (val.length > 5) { // Simple validation
-            localStorage.setItem('ai-key-validated', val);
-            validateAiKeyBtn.textContent = 'VALID';
-            validateAiKeyBtn.style.color = '#5cb85c';
-            validateAiKeyBtn.style.borderColor = '#5cb85c';
-            if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
-        } else {
-            showErrorPopup("Invalid AI Provider API Key!");
+        if (!val) { showErrorPopup('Please enter a Cerebras API key.'); return; }
+        setKeyState(validateAiKeyBtn, aiKeyInput, 'loading', 'ai-key-validated', val);
+        try {
+            const res = await fetch('http://localhost:3000/api/validate-cerebras', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apiKey: val })
+            });
+            const data = await res.json();
+            if (data.valid) {
+                setKeyState(validateAiKeyBtn, aiKeyInput, 'valid', 'ai-key-validated', val);
+            } else {
+                setKeyState(validateAiKeyBtn, aiKeyInput, 'invalid', 'ai-key-validated', val);
+                showErrorPopup(data.error || 'Invalid Cerebras API key.');
+            }
+        } catch (e) {
+            setKeyState(validateAiKeyBtn, aiKeyInput, 'invalid', 'ai-key-validated', val);
+            showErrorPopup('Could not reach the server. Make sure the backend is running.');
         }
     });
 
-    validateMurfKeyBtn.addEventListener('click', () => {
+    validateMurfKeyBtn.addEventListener('click', async () => {
         const val = murfKeyInput.value.trim();
-        if (val.length > 5) {
-            localStorage.setItem('murf-key-validated', val);
-            validateMurfKeyBtn.textContent = 'VALID';
-            validateMurfKeyBtn.style.color = '#5cb85c';
-            validateMurfKeyBtn.style.borderColor = '#5cb85c';
-            if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
-        } else {
-            showErrorPopup("Invalid Murf API Key!");
+        if (!val) { showErrorPopup('Please enter a Murf API key.'); return; }
+        setKeyState(validateMurfKeyBtn, murfKeyInput, 'loading', 'murf-key-validated', val);
+        try {
+            const res = await fetch('http://localhost:3000/api/validate-murf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apiKey: val })
+            });
+            const data = await res.json();
+            if (data.valid) {
+                setKeyState(validateMurfKeyBtn, murfKeyInput, 'valid', 'murf-key-validated', val);
+            } else {
+                setKeyState(validateMurfKeyBtn, murfKeyInput, 'invalid', 'murf-key-validated', val);
+                showErrorPopup(data.error || 'Invalid Murf API key.');
+            }
+        } catch (e) {
+            setKeyState(validateMurfKeyBtn, murfKeyInput, 'invalid', 'murf-key-validated', val);
+            showErrorPopup('Could not reach the server. Make sure the backend is running.');
         }
     });
 
-    validateAssemblyKeyBtn.addEventListener('click', () => {
+    validateAssemblyKeyBtn.addEventListener('click', async () => {
         const val = assemblyKeyInput.value.trim();
-        if (val.length > 5) {
-            localStorage.setItem('assembly-key-validated', val);
-            validateAssemblyKeyBtn.textContent = 'VALID';
-            validateAssemblyKeyBtn.style.color = '#5cb85c';
-            validateAssemblyKeyBtn.style.borderColor = '#5cb85c';
-            if (clickSfx) { clickSfx.currentTime = 0; clickSfx.play().catch(e => {}); }
-        } else {
-            showErrorPopup("Invalid Assembly AI API Key!");
+        if (!val) { showErrorPopup('Please enter an AssemblyAI API key.'); return; }
+        setKeyState(validateAssemblyKeyBtn, assemblyKeyInput, 'loading', 'assembly-key-validated', val);
+        try {
+            const res = await fetch('http://localhost:3000/api/validate-assembly', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apiKey: val })
+            });
+            const data = await res.json();
+            if (data.valid) {
+                setKeyState(validateAssemblyKeyBtn, assemblyKeyInput, 'valid', 'assembly-key-validated', val);
+            } else {
+                setKeyState(validateAssemblyKeyBtn, assemblyKeyInput, 'invalid', 'assembly-key-validated', val);
+                showErrorPopup(data.error || 'Invalid AssemblyAI API key.');
+            }
+        } catch (e) {
+            setKeyState(validateAssemblyKeyBtn, assemblyKeyInput, 'invalid', 'assembly-key-validated', val);
+            showErrorPopup('Could not reach the server. Make sure the backend is running.');
         }
     });
 
     aiKeyInput.addEventListener('input', () => {
-        validateAiKeyBtn.textContent = 'VALIDATE';
-        validateAiKeyBtn.style.color = '';
-        validateAiKeyBtn.style.borderColor = '';
-        localStorage.removeItem('ai-key-validated');
+        setKeyState(validateAiKeyBtn, aiKeyInput, 'reset', 'ai-key-validated', null);
     });
     
     murfKeyInput.addEventListener('input', () => {
-        validateMurfKeyBtn.textContent = 'VALIDATE';
-        validateMurfKeyBtn.style.color = '';
-        validateMurfKeyBtn.style.borderColor = '';
-        localStorage.removeItem('murf-key-validated');
+        setKeyState(validateMurfKeyBtn, murfKeyInput, 'reset', 'murf-key-validated', null);
     });
 
     assemblyKeyInput.addEventListener('input', () => {
-        validateAssemblyKeyBtn.textContent = 'VALIDATE';
-        validateAssemblyKeyBtn.style.color = '';
-        validateAssemblyKeyBtn.style.borderColor = '';
-        localStorage.removeItem('assembly-key-validated');
+        setKeyState(validateAssemblyKeyBtn, assemblyKeyInput, 'reset', 'assembly-key-validated', null);
     });
 
     // Volume Control Logic

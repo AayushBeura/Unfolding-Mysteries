@@ -10,6 +10,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
 
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+
 const suspectsList = [
     "Edward Hartwell",
     "Thomas Blackwood",
@@ -247,6 +249,87 @@ app.get('/api/tts', async (req, res) => {
             console.error("Murf API Data:", err.response.data);
         }
         res.status(500).send("TTS Error");
+    }
+});
+
+// --- API Key Validation Endpoints ---
+
+app.post('/api/validate-cerebras', async (req, res) => {
+    try {
+        const { apiKey } = req.body;
+        await axios.post('https://api.cerebras.ai/v1/chat/completions', {
+            model: 'qwen-3-235b-a22b-instruct-2507',
+            messages: [{ role: 'user', content: 'Hi' }],
+            max_tokens: 1
+        }, {
+            headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+        res.json({ valid: true });
+    } catch (e) {
+        const status = e.response?.status;
+        const msg = status === 401 || status === 403
+            ? 'Invalid Cerebras API key.'
+            : `Cerebras validation failed: ${e.message}`;
+        res.status(400).json({ valid: false, error: msg });
+    }
+});
+
+app.post('/api/validate-murf', async (req, res) => {
+    try {
+        const { apiKey } = req.body;
+        const murfRes = await axios.post('https://global.api.murf.ai/v1/speech/stream', {
+            voiceId: 'en-UK-freddie',
+            style: 'Conversational',
+            text: 'test',
+            rate: 0,
+            pitch: 0,
+            multiNativeLocale: 'en-UK',
+            model: 'FALCON',
+            format: 'MP3',
+            sampleRate: 24000,
+            channelType: 'MONO'
+        }, {
+            headers: { 'Content-Type': 'application/json', 'api-key': apiKey },
+            responseType: 'stream'
+        });
+        // Drain and discard the stream
+        murfRes.data.resume();
+        murfRes.data.on('end', () => res.json({ valid: true }));
+        murfRes.data.on('error', () => res.status(400).json({ valid: false, error: 'Murf stream error.' }));
+    } catch (e) {
+        const status = e.response?.status;
+        const msg = status === 401 || status === 403
+            ? 'Invalid Murf API key.'
+            : `Murf validation failed: ${e.message}`;
+        res.status(400).json({ valid: false, error: msg });
+    }
+});
+
+app.post('/api/validate-assembly', async (req, res) => {
+    try {
+        const { apiKey } = req.body;
+        const aaiClient = new AssemblyAI({ apiKey });
+        const transcriber = aaiClient.streaming.transcriber({
+            sampleRate: 16000,
+            speechModel: 'u3-rt-pro',
+            encoding: 'pcm_s16le'
+        });
+
+        await new Promise((resolve, reject) => {
+            transcriber.on('open', async () => {
+                await transcriber.close();
+                resolve();
+            });
+            transcriber.on('error', reject);
+            transcriber.connect().catch(reject);
+        });
+
+        res.json({ valid: true });
+    } catch (e) {
+        const msg = e.message?.includes('401') || e.message?.includes('403') || e.message?.includes('Unauthorized')
+            ? 'Invalid AssemblyAI API key.'
+            : `AssemblyAI validation failed: ${e.message}`;
+        res.status(400).json({ valid: false, error: msg });
     }
 });
 
