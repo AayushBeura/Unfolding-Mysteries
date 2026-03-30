@@ -1,3 +1,6 @@
+<img width="1136" height="427" alt="image" src="https://github.com/user-attachments/assets/7c32fc6b-dfa2-48c3-923f-a151fc50067c" />
+
+
 # Unfolding Mysteries 🕯️
 
 **Unfolding Mysteries** is an immersive, voice-activated murder mystery game set in the fog-drenched atmosphere of an 1880s mansion. As an investigator, you must interrogate five unique suspects using your own voice, piece together clues in your journal, and deliver the final verdict before time runs out.
