@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Check that the Node.js backend is reachable before launching
             try {
-                const healthRes = await fetch('http://localhost:3000/api/health', { signal: AbortSignal.timeout(3000) });
+                const healthRes = await fetch(`\${BACKEND_URL}/api/health`, { signal: AbortSignal.timeout(3000) });
                 if (!healthRes.ok) throw new Error('Bad response');
             } catch {
                 showErrorPopup("Cannot reach the game server.\n\nPlease open a terminal and run:\n  node server.js\n\nThen try again.");
@@ -540,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Fire async generate story request in background
             const apiKey = localStorage.getItem('ai-key-validated');
-            fetch('http://localhost:3000/api/generate-story', {
+            fetch(`\${BACKEND_URL}/api/generate-story`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ apiKey, difficulty: selectedDifficulty })
@@ -678,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!val) { showErrorPopup('Please enter a Cerebras API key.'); return; }
         setKeyState(validateAiKeyBtn, aiKeyInput, 'loading', 'ai-key-validated', val);
         try {
-            const res = await fetch('http://localhost:3000/api/validate-cerebras', {
+            const res = await fetch(`\${BACKEND_URL}/api/validate-cerebras`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ apiKey: val })
@@ -701,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!val) { showErrorPopup('Please enter a Murf API key.'); return; }
         setKeyState(validateMurfKeyBtn, murfKeyInput, 'loading', 'murf-key-validated', val);
         try {
-            const res = await fetch('http://localhost:3000/api/validate-murf', {
+            const res = await fetch(`\${BACKEND_URL}/api/validate-murf`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ apiKey: val })
@@ -724,7 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!val) { showErrorPopup('Please enter an AssemblyAI API key.'); return; }
         setKeyState(validateAssemblyKeyBtn, assemblyKeyInput, 'loading', 'assembly-key-validated', val);
         try {
-            const res = await fetch('http://localhost:3000/api/validate-assembly', {
+            const res = await fetch(`\${BACKEND_URL}/api/validate-assembly`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ apiKey: val })
@@ -1217,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        backendSocket = new WebSocket('ws://localhost:3000');
+        backendSocket = new WebSocket(`\${WS_URL}`);
 
         backendSocket.onopen = () => {
             console.log('[STT] WebSocket connected, initializing AssemblyAI session...');
@@ -1338,7 +1338,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            fetch('http://localhost:3000/api/interrogate', {
+            fetch(`\${BACKEND_URL}/api/interrogate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ apiKey: aiApiKey, sysPrompt, history: chatHistories[suspectName], question: questionStr })

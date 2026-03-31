@@ -1,0 +1,10 @@
+{
+  "buildCommand": "echo \"Nothing to build\"",
+  "devCommand": "echo \"Nothing to dev\"",
+  "framework": null,
+  "outputDirectory": ".",
+  "public": true,
+  "github": {
+    "enabled": false
+  }
+}
